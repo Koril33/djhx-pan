@@ -1,0 +1,7 @@
+.venv
+venv
+.idea
+logs
+__pycache__
+*.db
+assets
