@@ -1,0 +1,10 @@
+[project]
+name = "djhx-pan"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "concurrent-log-handler>=0.9.28",
+    "flask>=3.1.2",
+    "gunicorn>=23.0.0",
+]

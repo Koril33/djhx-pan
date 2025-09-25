@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <script>
+        function switchTab(type) {
+            if (type === 'username') {
+                document.getElementById('tab-username').style.display = 'block';
+                document.getElementById('tab-email').style.display = 'none';
+                document.getElementById('login_type').value = 'username';
+            } else {
+                document.getElementById('tab-username').style.display = 'none';
+                document.getElementById('tab-email').style.display = 'block';
+                document.getElementById('login_type').value = 'email';
+            }
+        }
+        function sendCode() {
+            const email = document.getElementById('email').value;
+            if (!email) {
+                alert("请输入邮箱");
+                return;
+            }
+            fetch("{{ url_for('auth.send_code') }}", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({email: email})
+            }).then(resp => resp.json()).then(data => {
+                alert(data.message);
+            });
+        }
+    </script>
+{% endblock %}
+{% block title %}登录{% endblock %}
+
+{% block content %}
+    <div class="login-box">
+        <h1>登录</h1>
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        <form action="{{ url_for('auth.login') }}" method="post">
+            <div id="tab-username" {% if login_type == 'email' %} style="display: none" {% endif %}>
+                <label for="username">用户名：</label>
+                <input id="username" name="username" type="text" value="{{ username or '' }}">
+                <br>
+                <label for="password">密码：</label>
+                <input id="password" name="password" type="password">
+            </div>
+
+            <div id="tab-email" {% if login_type == 'username' %} style="display: none" {% endif %}>
+                <label for="email">邮箱：</label>
+                <input id="email" name="email" type="email" value="{{ email or '' }}">
+                <br>
+                <label for="code">验证码：</label>
+                <input id="code" name="code" type="text">
+                <button class="send-code-btn" type="button" onclick="sendCode()">发送验证码</button>
+            </div>
+
+            <br>
+            <input type="hidden" id="login_type" name="login_type" value="{{ login_type }}">
+            <input type="submit" value="登录">
+        </form>
+
+        <p>
+            <a href="javascript:void(0)" onclick="switchTab('username')">用户名登录</a> |
+            <a href="javascript:void(0)" onclick="switchTab('email')">邮箱登录</a>
+        </p>
+    </div>
+
+{% endblock %}
