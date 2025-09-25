@@ -14,7 +14,7 @@ class DevelopmentConfig(AppConfig):
 
 class ProductionConfig(AppConfig):
     # 存储生产环境中的配置
-    DB_NAME = "djhx-pan.db"
+    DB_NAME = "/home/koril/project/djhx-pan/djhx-pan.db"
 
 config_dict = {
     'development': DevelopmentConfig,
