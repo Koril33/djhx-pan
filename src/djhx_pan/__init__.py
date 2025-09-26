@@ -13,6 +13,8 @@ from .config import app_config
 from .config.app_config import AppConfig
 from .route.auth import auth_bp
 from .route.main import main_bp
+from .route.file import file_bp
+from .route.user import user_bp
 
 
 def create_app(config_mode: str = 'development'):
@@ -30,6 +32,8 @@ def create_app(config_mode: str = 'development'):
     flask_app.register_blueprint(auth_bp)
     # flask_app.register_blueprint(book_bp)
     flask_app.register_blueprint(main_bp)
+    flask_app.register_blueprint(file_bp)
+    flask_app.register_blueprint(user_bp)
 
     # 全局异常处理
     @flask_app.errorhandler(500)

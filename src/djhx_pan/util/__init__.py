@@ -2,10 +2,12 @@ import base64
 import hashlib
 import hmac
 import os
+import re
 import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
 from functools import wraps
+from pathlib import PurePath
 
 from flask import jsonify, session, redirect, url_for, request
 
@@ -95,3 +97,16 @@ def send_email_verify_code(email, code):
     with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, recipient_email, message.as_string())
+
+
+def safe_secure_filename(filename):
+    if not filename:
+        return ""
+    filename = PurePath(filename).name  # 去掉路径部分
+    filename = filename.strip()
+    if filename.startswith('.'):
+        filename = '_' + filename[1:]
+    filename = re.sub(r'[/\\:*?"<>|\x00-\x1f]', '_', filename)
+    if all(c == '.' for c in filename):
+        filename = '_' + filename
+    return filename[:255]

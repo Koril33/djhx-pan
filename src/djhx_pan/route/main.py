@@ -3,7 +3,6 @@ import logging
 from flask import Blueprint, render_template, session
 
 from ..config.app_config import AppConfig
-from ..db import DB
 from ..util import login_required
 
 main_bp = Blueprint('main', __name__)
@@ -20,12 +19,12 @@ def index():
 
     return render_template('index.html', username=username)
 
-#
-# @main_bp.get('/dashboard')
-# @login_required
-# def dashboard():
-#     s_user = session.get("user")
-#     username = 'anonymous'
-#     if s_user:
-#         username = s_user.get('username')
-#     return render_template('dashboard.html', username=username)
+
+@main_bp.get('/dashboard')
+@login_required
+def dashboard():
+    s_user = session.get("user")
+    username = 'anonymous'
+    if s_user:
+        username = s_user.get('username')
+    return render_template('dashboard.html', username=username)

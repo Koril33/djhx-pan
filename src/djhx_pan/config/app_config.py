@@ -11,10 +11,12 @@ class AppConfig(object):
 class DevelopmentConfig(AppConfig):
     # 存储开发环境中的配置
     DB_NAME = "C:\\Project\\MyProject\\djhx-pan\\djhx-pan.db"
+    UPLOAD_FOLDER = "C:\\Project\\MyProject\\djhx-pan\\uploads"
 
 class ProductionConfig(AppConfig):
     # 存储生产环境中的配置
     DB_NAME = "/home/koril/project/djhx-pan/djhx-pan.db"
+    UPLOAD_FOLDER = "/home/koril/project/djhx-pan/uploads"
 
 config_dict = {
     'development': DevelopmentConfig,

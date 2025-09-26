@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <h2>DJHX-Pan</h2>
+        <ul>
+            <li>
+                <a href="{{ url_for('file.file_page') }}" {% if request.endpoint == '/file' %}class="active"{% endif %}>文件管理</a>
+            </li>
+            <li>
+                <a href="{{ url_for('user.page') }}" {% if request.endpoint == '/user/page' %}class="active"{% endif %}>用户管理</a>
+            </li>
+        </ul>
+    </div>
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

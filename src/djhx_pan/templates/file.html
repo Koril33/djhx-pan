@@ -1,0 +1,40 @@
+{% extends "dashboard.html" %}
+{% block title %}文件管理{% endblock %}
+{% block content %}
+<h1>文件管理</h1>
+
+<form action="{{ url_for('file.upload_file') }}" method="post" enctype="multipart/form-data">
+    <input type="file" name="file">
+    <button type="submit">上传</button>
+</form>
+
+<table class="file-table">
+    <thead>
+        <tr>
+            <th>文件名</th>
+            <th>大小</th>
+            <th>类型</th>
+            <th>创建时间</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for f in files %}
+        <tr>
+            <td>{{ f.filename }}</td>
+            <td>{{ f.filesize }} B</td>
+            <td>{{ f.filetype }}</td>
+            <td>{{ f.create_datetime }}</td>
+            <td>
+                <a href="{{ url_for('file.download_file', file_id=f.id) }}">下载</a>
+                <form action="{{ url_for('file.delete_file', file_id=f.id) }}" method="post" style="display:inline;">
+                    <button type="submit" onclick="return confirm('确认删除？')">删除</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">暂无文件</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
