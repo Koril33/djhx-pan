@@ -3,38 +3,146 @@
 {% block content %}
 <h1>文件管理</h1>
 
-<form action="{{ url_for('file.upload_file') }}" method="post" enctype="multipart/form-data">
-    <input type="file" name="file">
-    <button type="submit">上传</button>
-</form>
+<div class="toolbar">
+    <form action="{{ url_for('file.upload_file') }}" method="post" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="hidden" name="parent_id" value="{{ parent.id if parent else '' }}">
+        <button type="submit">上传</button>
+    </form>
 
-<table class="file-table">
-    <thead>
-        <tr>
-            <th>文件名</th>
-            <th>大小</th>
-            <th>类型</th>
-            <th>创建时间</th>
-            <th>操作</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for f in files %}
-        <tr>
-            <td>{{ f.filename }}</td>
-            <td>{{ f.filesize }} B</td>
-            <td>{{ f.filetype }}</td>
-            <td>{{ f.create_datetime }}</td>
-            <td>
-                <a href="{{ url_for('file.download_file', file_id=f.id) }}">下载</a>
+    <form action="{{ url_for('file.create_folder') }}" method="post" style="display:inline;">
+        <input type="text" name="folder_name" placeholder="新建文件夹">
+        <input type="hidden" name="parent_id" value="{{ parent.id if parent else '' }}">
+        <button type="submit">创建</button>
+    </form>
+
+    {% if parent %}
+        <button onclick="location.href='{{ url_for('file.file_page', parent_id=parent.parent_id) }}'">返回上级</button>
+    {% endif %}
+
+    <button id="toggleViewBtn">切换视图</button>
+</div>
+
+<div id="fileContainer" class="grid-view">
+    {% for f in files %}
+        <div class="file-item" data-id="{{ f.id }}">
+            {% if f.is_dir %}
+                <div class="icon folder" onclick="openDir({{ f.id }})"></div>
+            {% else %}
+                <div class="icon file"></div>
+            {% endif %}
+            <div class="filename" title="{{ f.filename }}">{{ f.filename }}</div>
+            <div class="actions">
+                {% if not f.is_dir %}
+                    <a href="{{ url_for('file.download_file', file_id=f.id) }}">下载</a>
+                {% endif %}
                 <form action="{{ url_for('file.delete_file', file_id=f.id) }}" method="post" style="display:inline;">
                     <button type="submit" onclick="return confirm('确认删除？')">删除</button>
                 </form>
-            </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="5">暂无文件</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+            </div>
+        </div>
+    {% else %}
+        <p>此目录为空</p>
+    {% endfor %}
+</div>
+
+<script>
+function openDir(id) {
+    location.href = `{{ url_for('file.file_page') }}?parent_id=${id}`;
+}
+
+const toggleBtn = document.getElementById('toggleViewBtn');
+const container = document.getElementById('fileContainer');
+
+// 从 localStorage 读取上次的视图模式
+let currentView = localStorage.getItem('viewMode') || 'grid';
+applyView(currentView);
+
+toggleBtn.addEventListener('click', () => {
+    currentView = (currentView === 'grid') ? 'list' : 'grid';
+    localStorage.setItem('viewMode', currentView);
+    applyView(currentView);
+});
+
+function applyView(mode) {
+    if (mode === 'grid') {
+        container.classList.add('grid-view');
+        container.classList.remove('list-view');
+        toggleBtn.textContent = '切换到列表视图';
+    } else {
+        container.classList.add('list-view');
+        container.classList.remove('grid-view');
+        toggleBtn.textContent = '切换到图标视图';
+    }
+}
+</script>
+
+<style>
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+#fileContainer.grid-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 20px;
+}
+#fileContainer.list-view {
+    display: block;
+}
+.file-item {
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    transition: box-shadow 0.2s;
+    background-color: #fafafa;
+}
+.file-item:hover {
+    box-shadow: 0 0 6px rgba(0,0,0,0.2);
+}
+.icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 8px;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+.folder {
+    background-image: url('{{ url_for("static", filename="icons/folder.png") }}');
+}
+.file {
+    background-image: url('{{ url_for("static", filename="icons/file.png") }}');
+}
+.filename {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.actions {
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+/* 列表模式样式 */
+.list-view .file-item {
+    display: flex;
+    align-items: center;
+    text-align: left;
+    padding: 8px;
+}
+.list-view .icon {
+    width: 32px;
+    height: 32px;
+    margin: 0 10px 0 0;
+}
+.list-view .filename {
+    flex: 1;
+}
+.list-view .actions {
+    margin: 0 10px;
+}
+</style>
 {% endblock %}
