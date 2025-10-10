@@ -1,49 +1,103 @@
 {% extends "dashboard.html" %}
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/file.css') }}">
+{% endblock %}
 {% block title %}文件管理{% endblock %}
 {% block content %}
 <h1>文件管理</h1>
 
-<div class="toolbar">
-    <form action="{{ url_for('file.upload_file') }}" method="post" enctype="multipart/form-data">
-        <input type="file" name="file">
-        <input type="hidden" name="parent_id" value="{{ parent.id if parent else '' }}">
-        <button type="submit">上传</button>
-    </form>
-
-    <form action="{{ url_for('file.create_folder') }}" method="post" style="display:inline;">
-        <input type="text" name="folder_name" placeholder="新建文件夹">
-        <input type="hidden" name="parent_id" value="{{ parent.id if parent else '' }}">
-        <button type="submit">创建</button>
-    </form>
-
-    {% if parent %}
-        <button onclick="location.href='{{ url_for('file.file_page', parent_id=parent.parent_id) }}'">返回上级</button>
+<!-- 面包屑导航 -->
+<div class="breadcrumbs" id="breadcrumbs">
+    {% set root = {'id': None, 'filename': '根目录'} %}
+    <a href="{{ url_for('file.file_page') }}">根目录</a>
+    <span class="sep">/</span>
+    {% if breadcrumbs %}
+        {% for crumb in breadcrumbs %}
+            {% if not loop.last %}
+                <a href="{{ url_for('file.file_page') }}?parent_id={{ crumb.id }}">{{ crumb.filename }}</a>
+                <span class="sep">/</span>
+            {% else %}
+                <span>{{ crumb.filename }}</span>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <span>当前目录</span>
     {% endif %}
-
-    <button id="toggleViewBtn">切换视图</button>
 </div>
 
-<div id="fileContainer" class="grid-view">
-    {% for f in files %}
-        <div class="file-item" data-id="{{ f.id }}">
-            {% if f.is_dir %}
-                <div class="icon folder" onclick="openDir({{ f.id }})"></div>
-            {% else %}
-                <div class="icon file"></div>
-            {% endif %}
-            <div class="filename" title="{{ f.filename }}">{{ f.filename }}</div>
-            <div class="actions">
-                {% if not f.is_dir %}
-                    <a href="{{ url_for('file.download_file', file_id=f.id) }}">下载</a>
-                {% endif %}
-                <form action="{{ url_for('file.delete_file', file_id=f.id) }}" method="post" style="display:inline;">
-                    <button type="submit" onclick="return confirm('确认删除？')">删除</button>
-                </form>
-            </div>
+<div class="toolbar">
+    <!-- 上传表单（保留用于回退） -->
+    <div style="display:flex; gap:8px; align-items:center;">
+        <label class="btn primary" id="browseUploadBtn">
+            上传文件
+            <input type="file" id="fileInput" name="file" style="display:none;" multiple>
+        </label>
+
+        <form id="createFolderForm" action="{{ url_for('file.create_folder') }}" method="post" style="display:inline;">
+            <input class="input-inline" type="text" name="folder_name" placeholder="新建文件夹名称" required>
+            <input type="hidden" name="parent_id" value="{{ parent.id if parent else '' }}">
+            <button class="btn" type="submit">创建</button>
+        </form>
+    </div>
+
+    {% if parent %}
+        <a class="btn" href="{{ url_for('file.file_page', parent_id=parent.parent_id) }}">返回上级</a>
+    {% endif %}
+
+    <button class="btn" id="toggleViewBtn">切换到列表视图</button>
+
+    <button class="btn danger" id="deleteSelectedBtn" style="margin-left:auto;">删除选中</button>
+</div>
+
+<!-- 拖拽上传区域 -->
+<div id="uploadDropzone" class="upload-dropzone">
+    <div style="flex:1">
+        将文件拖到此处以上传，或点击“上传文件”选择。<br>
+        支持多文件上传。
+    </div>
+    <div style="width:200px; max-width:40%;">
+        <div class="progress" id="globalProgress" style="display:none;">
+            <i id="globalProgressBar" style="width:0%"></i>
         </div>
+    </div>
+</div>
+
+<!-- 多选隐藏表单（提交 selected ids 到后端） -->
+<form id="multiDeleteForm" action="{{ url_for('file.delete_multiple') }}" method="post" style="display:none;">
+    <input type="hidden" name="selected_ids" id="selectedIdsInput" value="">
+</form>
+
+<div id="fileContainer" class="grid-view">
+    {% if files %}
+        {% for f in files %}
+            <div class="file-item-wrapper">
+                <div class="file-item" data-id="{{ f.id }}">
+                    <div class="select-area">
+                        <input type="checkbox" class="select-checkbox" value="{{ f.id }}">
+                    </div>
+
+                    {% if f.is_dir %}
+                        <div class="icon folder" onclick="openDir({{ f.id }})" title="打开文件夹"></div>
+                    {% else %}
+                        <div class="icon file" title="文件"></div>
+                    {% endif %}
+
+                    <div class="filename" title="{{ f.filename }}">{{ f.filename }}</div>
+
+                    <div class="actions">
+                        {% if not f.is_dir %}
+                            <a class="btn" href="{{ url_for('file.download_file', file_id=f.id) }}">下载</a>
+                        {% endif %}
+                        <form action="{{ url_for('file.delete_file_route', file_id=f.id) }}" method="post" style="display:inline;">
+                            <button class="btn" type="submit" onclick="return confirm('确认删除？')">删除</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
     {% else %}
-        <p>此目录为空</p>
-    {% endfor %}
+        <div class="empty-placeholder">此目录为空</div>
+    {% endif %}
 </div>
 
 <script>
@@ -51,19 +105,16 @@ function openDir(id) {
     location.href = `{{ url_for('file.file_page') }}?parent_id=${id}`;
 }
 
+/* 视图切换 */
 const toggleBtn = document.getElementById('toggleViewBtn');
 const container = document.getElementById('fileContainer');
-
-// 从 localStorage 读取上次的视图模式
 let currentView = localStorage.getItem('viewMode') || 'grid';
 applyView(currentView);
-
 toggleBtn.addEventListener('click', () => {
     currentView = (currentView === 'grid') ? 'list' : 'grid';
     localStorage.setItem('viewMode', currentView);
     applyView(currentView);
 });
-
 function applyView(mode) {
     if (mode === 'grid') {
         container.classList.add('grid-view');
@@ -75,74 +126,119 @@ function applyView(mode) {
         toggleBtn.textContent = '切换到图标视图';
     }
 }
+
+/* 多选删除逻辑 */
+const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+const multiDeleteForm = document.getElementById('multiDeleteForm');
+const selectedIdsInput = document.getElementById('selectedIdsInput');
+
+function getSelectedIds() {
+    const boxes = document.querySelectorAll('.select-checkbox:checked');
+    return Array.from(boxes).map(cb => cb.value);
+}
+
+deleteSelectedBtn.addEventListener('click', () => {
+    const ids = getSelectedIds();
+    if (!ids.length) {
+        alert('请先选择要删除的项');
+        return;
+    }
+    if (!confirm('确认删除所选项？（删除后不可恢复）')) return;
+    selectedIdsInput.value = ids.join(',');
+    multiDeleteForm.submit();
+});
+
+/* 点击图片/文件自动切换选择（小交互） */
+document.querySelectorAll('.file-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+        // 如果点击的是链接或按钮，跳过 toggle
+        if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('form')) return;
+        // 点击文件项时，不影响打开文件夹（folder icon has onclick），仅切换 checkbox
+        const checkbox = item.parentElement.querySelector('.select-checkbox');
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+        }
+    });
+});
+
+/* 文件上传（点击 + 拖拽） */
+const fileInput = document.getElementById('fileInput');
+const browseBtn = document.getElementById('browseUploadBtn');
+const uploadDropzone = document.getElementById('uploadDropzone');
+const parentId = "{{ parent.id if parent else '' }}";
+const globalProgress = document.getElementById('globalProgress');
+const globalProgressBar = document.getElementById('globalProgressBar');
+
+browseBtn.addEventListener('click', (e) => {
+    // fileInput is hidden; clicking label triggers it
+    // nothing else needed
+});
+
+fileInput.addEventListener('change', async (e) => {
+    const files = e.target.files;
+    if (files.length) {
+        await uploadFiles(files);
+        fileInput.value = '';
+    }
+});
+
+/* 拖拽事件 */
+['dragenter','dragover'].forEach(ev => {
+    uploadDropzone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadDropzone.classList.add('dragover');
+    });
+});
+['dragleave','drop'].forEach(ev => {
+    uploadDropzone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadDropzone.classList.remove('dragover');
+    });
+});
+
+uploadDropzone.addEventListener('drop', async (e) => {
+    const dt = e.dataTransfer;
+    if (!dt) return;
+    const files = dt.files;
+    if (files && files.length) {
+        await uploadFiles(files);
+    }
+});
+
+/* 上传函数：使用 fetch + FormData */
+async function uploadFiles(fileList) {
+    const files = Array.from(fileList);
+    // Show global progress
+    globalProgress.style.display = 'block';
+    globalProgressBar.style.width = '0%';
+
+    let uploaded = 0;
+
+    // sequentially upload to keep server load friendly; you can adapt to parallel if needed
+    for (const file of files) {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('parent_id', parentId);
+
+        try {
+            // use fetch to POST to upload endpoint
+            const resp = await fetch("{{ url_for('file.upload_file') }}", {
+                method: 'POST',
+                body: form,
+            });
+            // treat any response as success for UI; server will handle validation and redirect
+        } catch (err) {
+            console.error('上传失败', err);
+        }
+        uploaded++;
+        const pct = Math.round((uploaded / files.length) * 100);
+        globalProgressBar.style.width = pct + '%';
+    }
+
+    // refresh page after uploads complete to show new files
+    location.reload();
+}
 </script>
-
-<style>
-.toolbar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-#fileContainer.grid-view {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 20px;
-}
-#fileContainer.list-view {
-    display: block;
-}
-.file-item {
-    text-align: center;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    transition: box-shadow 0.2s;
-    background-color: #fafafa;
-}
-.file-item:hover {
-    box-shadow: 0 0 6px rgba(0,0,0,0.2);
-}
-.icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 8px;
-    background-size: contain;
-    background-repeat: no-repeat;
-}
-.folder {
-    background-image: url('{{ url_for("static", filename="icons/folder.png") }}');
-}
-.file {
-    background-image: url('{{ url_for("static", filename="icons/file.png") }}');
-}
-.filename {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.actions {
-    margin-top: 5px;
-    font-size: 0.9em;
-}
-
-/* 列表模式样式 */
-.list-view .file-item {
-    display: flex;
-    align-items: center;
-    text-align: left;
-    padding: 8px;
-}
-.list-view .icon {
-    width: 32px;
-    height: 32px;
-    margin: 0 10px 0 0;
-}
-.list-view .filename {
-    flex: 1;
-}
-.list-view .actions {
-    margin: 0 10px;
-}
-</style>
 {% endblock %}

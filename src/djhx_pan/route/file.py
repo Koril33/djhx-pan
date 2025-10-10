@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+from typing import Optional, Dict, Any, List
 
 from flask import Blueprint, request, render_template, send_from_directory, redirect, url_for, flash
 
@@ -10,62 +11,147 @@ from ..util import safe_secure_filename
 
 app_logger = logging.getLogger(AppConfig.PROJECT_NAME + "." + __name__)
 
+# 上传目录（项目内相对路径）
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 file_bp = Blueprint('file', __name__, url_prefix='/file')
 
 
+def _row_to_dict(row) -> Dict[str, Any]:
+    """
+    如果 DB.query 返回的是 dict-like 或 sqlite Row，这里保证是 dict
+    """
+    try:
+        return dict(row)
+    except Exception:
+        return row
+
+
+def build_breadcrumbs(start_parent_id: Optional[int]) -> List[Dict[str, Any]]:
+    """
+    从当前 parent_id 向上查父节点，生成面包屑（根不包含 None）
+    返回列表，顺序是从根向下到当前（root...current）
+    """
+    crumbs: List[Dict[str, Any]] = []
+    pid = start_parent_id
+    safety = 0
+    while pid:
+        safety += 1
+        if safety > 100:
+            break
+        rows = DB.query("SELECT * FROM t_file WHERE id=?", (pid,))
+        if not rows:
+            break
+        row = _row_to_dict(rows[0])
+        crumbs.append({'id': row.get('id'), 'filename': row.get('filename')})
+        pid = row.get('parent_id')
+    crumbs.reverse()
+    return crumbs
+
+
+def delete_entry(entry_id: int):
+    """
+    递归删除一个 t_file 条目：
+    - 如果是文件，删除物理文件（如果存在）
+    - 如果是目录，递归删除子条目
+    - 最后删除数据库记录本身
+    """
+    rows = DB.query("SELECT * FROM t_file WHERE id=?", (entry_id,))
+    if not rows:
+        return
+    row = _row_to_dict(rows[0])
+
+    if row.get('is_dir'):
+        # 先删除子节点
+        children = DB.query("SELECT id FROM t_file WHERE parent_id=?", (entry_id,))
+        for c in children:
+            # c 可能是 Row-like
+            cid = c.get('id') if isinstance(c, dict) else c[0] if len(c) else None
+            if cid:
+                delete_entry(cid)
+    else:
+        filepath = row.get('filepath')
+        try:
+            if filepath and os.path.exists(filepath) and os.path.isfile(filepath):
+                os.remove(filepath)
+        except Exception as e:
+            app_logger.warning("删除文件 %s 时出错: %s", filepath, e)
+
+    # 删除数据库记录
+    DB.execute("DELETE FROM t_file WHERE id=?", (entry_id,))
+
+
 @file_bp.route('/', methods=['GET'])
 def file_page():
     parent_id = request.args.get('parent_id')
     if parent_id:
+        # 取指定父目录下的条目
         rows = DB.query("SELECT * FROM t_file WHERE parent_id=?", (parent_id,))
     else:
         rows = DB.query("SELECT * FROM t_file WHERE parent_id IS NULL")
 
+    # 保证 rows 为 list of dict
+    rows = [_row_to_dict(r) for r in rows] if rows else []
+
     parent = None
     if parent_id:
         parent_result = DB.query("SELECT * FROM t_file WHERE id=?", (parent_id,))
-        parent = parent_result[0] if parent_result else None
+        parent = _row_to_dict(parent_result[0]) if parent_result else None
 
-    return render_template('file.html', files=rows, parent=parent)
+    # 生成面包屑，从根到当前
+    breadcrumbs = build_breadcrumbs(parent.get('id') if parent else None)
+
+    return render_template('file.html', files=rows, parent=parent, breadcrumbs=breadcrumbs)
 
 
 @file_bp.route('/upload', methods=['POST'])
 def upload_file():
+    # 支持传统表单上传（file input）和 fetch 上传（multipart）
     if 'file' not in request.files:
         flash("未选择文件")
-        return redirect(url_for('file.file_page'))
+        # 保持 parent_id 如果有的话
+        return redirect(url_for('file.file_page', parent_id=request.form.get('parent_id') or None))
 
     f = request.files['file']
     if f.filename == '':
         flash("文件名为空")
-        return redirect(url_for('file.file_page'))
+        return redirect(url_for('file.file_page', parent_id=request.form.get('parent_id') or None))
 
     filename = safe_secure_filename(f.filename)
     if not filename:
         flash("无效的文件名")
-        return redirect(url_for('file.file_page'))
+        return redirect(url_for('file.file_page', parent_id=request.form.get('parent_id') or None))
 
     parent_id = request.form.get('parent_id') or None
+    # 保存到 uploads 目录并避免同名覆盖
     save_path = os.path.join(UPLOAD_FOLDER, filename)
 
     counter = 1
-    original_save_path = save_path
+    original_name = filename
+    name_root, ext = os.path.splitext(original_name)
     while os.path.exists(save_path):
-        name, ext = os.path.splitext(original_save_path)
-        save_path = f"{name}_{counter}{ext}"
+        filename = f"{name_root}_{counter}{ext}"
+        save_path = os.path.join(UPLOAD_FOLDER, filename)
         counter += 1
-        filename = os.path.basename(save_path)
 
-    f.save(save_path)
+    try:
+        f.save(save_path)
+    except Exception as e:
+        app_logger.exception("保存上传文件失败: %s", e)
+        flash("保存文件失败")
+        return redirect(url_for('file.file_page', parent_id=parent_id))
 
+    # 检查是否为文件
     if not os.path.isfile(save_path):
-        if os.path.exists(save_path):
-            os.rmdir(save_path)
+        # 清理异常目录（极端情况）
+        if os.path.exists(save_path) and os.path.isdir(save_path):
+            try:
+                os.rmdir(save_path)
+            except Exception:
+                pass
         flash("上传内容不是有效文件")
-        return redirect(url_for('file.file_page'))
+        return redirect(url_for('file.file_page', parent_id=parent_id))
 
     filesize = os.path.getsize(save_path)
     _, ext = os.path.splitext(filename)
@@ -80,6 +166,7 @@ def upload_file():
         (filename, filesize, filetype, save_path, 0, parent_id, now, now)
     )
 
+    # 上传后若是 fetch 提交通常会返回 200；这里统一重定向到目录页
     return redirect(url_for('file.file_page', parent_id=parent_id))
 
 
@@ -93,6 +180,7 @@ def create_folder():
         flash("文件夹名称不能为空")
         return redirect(url_for('file.file_page', parent_id=parent_id))
 
+    # 插入目录记录（filepath 为 NULL）
     DB.execute("""
         INSERT INTO t_file (filename, is_dir, parent_id, create_datetime, update_datetime)
         VALUES (?, ?, ?, ?, ?)
@@ -106,28 +194,71 @@ def download_file(file_id):
     rows = DB.query("SELECT * FROM t_file WHERE id=?", (file_id,))
     if not rows:
         return "文件不存在", 404
-    row = rows[0]
+    row = _row_to_dict(rows[0])
 
-    directory = os.path.dirname(row['filepath'])
-    filename = os.path.basename(row['filepath'])
+    filepath = row.get('filepath')
+    if not filepath:
+        return "无法下载：未找到文件路径", 404
+    directory = os.path.dirname(filepath)
+    filename = os.path.basename(filepath)
+    # send_from_directory 将处理文件名编码等
     return send_from_directory(directory, filename, as_attachment=True)
 
 
 @file_bp.route('/delete/<int:file_id>', methods=['POST'])
-def delete_file(file_id):
+def delete_file_route(file_id):
     rows = DB.query("SELECT * FROM t_file WHERE id=?", (file_id,))
     if not rows:
         return "文件不存在", 404
-    row = rows[0]
+    row = _row_to_dict(rows[0])
 
-    if row['is_dir']:
-        # 删除文件夹（递归）
-        children = DB.query("SELECT id FROM t_file WHERE parent_id=?", (file_id,))
-        for c in children:
-            delete_file(c['id'])
-    else:
-        if os.path.exists(row['filepath']):
-            os.remove(row['filepath'])
+    # 先删除物理文件/子文件（由 helper 完成）
+    try:
+        delete_entry(file_id)
+    except Exception as e:
+        app_logger.exception("删除条目 %s 失败: %s", file_id, e)
+        flash("删除失败")
+        return redirect(url_for('file.file_page', parent_id=row.get('parent_id')))
 
-    DB.execute("DELETE FROM t_file WHERE id=?", (file_id,))
     return redirect(url_for('file.file_page', parent_id=row.get('parent_id')))
+
+
+@file_bp.route('/delete-multiple', methods=['POST'])
+def delete_multiple():
+    """
+    处理批量删除请求。前端传来 selected_ids 字符串（逗号分隔）。
+    """
+    selected = request.form.get('selected_ids') or ''
+    if not selected:
+        flash("未选择要删除的项")
+        return redirect(url_for('file.file_page'))
+
+    try:
+        parts = [p.strip() for p in selected.split(',') if p.strip()]
+        ids = [int(p) for p in parts]
+    except Exception:
+        flash("传入的 id 格式错误")
+        return redirect(url_for('file.file_page'))
+
+    # 为了返回到合适的目录，尝试读取第一个 id 的 parent_id
+    parent_id = None
+    first_row = DB.query("SELECT parent_id FROM t_file WHERE id=?", (ids[0],)) if ids else None
+    if first_row:
+        try:
+            parent_id = first_row[0].get('parent_id') if isinstance(first_row[0], dict) else first_row[0][0]
+        except Exception:
+            parent_id = None
+
+    # 逐个删除
+    for _id in ids:
+        try:
+            delete_entry(_id)
+        except Exception as e:
+            app_logger.exception("批量删除时 %s 失败: %s", _id, e)
+            # 继续删除剩余项
+
+    return redirect(url_for('file.file_page', parent_id=parent_id))
+
+
+# 如果该 Blueprint 注册名不是 file，需要在 blueprint 注册处使用 file_bp
+# app.register_blueprint(file_bp)
