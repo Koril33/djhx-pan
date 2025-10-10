@@ -11,10 +11,10 @@
         <h2>DJHX-Pan</h2>
         <ul>
             <li>
-                <a href="{{ url_for('file.file_page') }}" {% if request.endpoint == '/file' %}class="active"{% endif %}>文件管理</a>
+                <a href="{{ url_for('file.file_page') }}" {% if request.endpoint == 'file.file_page' %}class="active"{% endif %}>文件管理</a>
             </li>
             <li>
-                <a href="{{ url_for('user.page') }}" {% if request.endpoint == '/user/page' %}class="active"{% endif %}>用户管理</a>
+                <a href="{{ url_for('user.page') }}" {% if request.endpoint == 'user.page' %}class="active"{% endif %}>用户管理</a>
             </li>
         </ul>
     </div>
