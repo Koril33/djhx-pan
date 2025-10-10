@@ -4,8 +4,8 @@ class AppConfig(object):
 
     APP_HOST = "0.0.0.0"
     APP_PORT = 8125
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-    MAX_FORM_MEMORY_SIZE = 16 * 1024 * 1024
+    MAX_CONTENT_LENGTH = 100 * 1024 * 1024
+    MAX_FORM_MEMORY_SIZE = 100 * 1024 * 1024
 
 
 class DevelopmentConfig(AppConfig):
