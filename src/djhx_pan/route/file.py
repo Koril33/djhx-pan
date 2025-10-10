@@ -17,6 +17,17 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 file_bp = Blueprint('file', __name__, url_prefix='/file')
 
+ICON_TYPES = {
+    "pdf": "pdf",
+    "jpg": "image", "jpeg": "image", "png": "image", "gif": "image",
+    "txt": "text", "log": "text", "md": "text",
+    "zip": "archive", "rar": "archive", "7z": "archive",
+    "mp3": "audio", "wav": "audio",
+    "mp4": "video", "avi": "video", "mkv": "video",
+    "csv": "spreadsheet", "xlsx": "spreadsheet", "xls": "spreadsheet",
+    "doc": "word", "docx": "word",
+}
+
 
 def _row_to_dict(row) -> Dict[str, Any]:
     """
@@ -82,6 +93,46 @@ def delete_entry(entry_id: int):
     DB.execute("DELETE FROM t_file WHERE id=?", (entry_id,))
 
 
+@file_bp.app_template_filter('format_file_size')
+def format_file_size(size_in_bytes, decimals=2):
+    """
+    自动将字节 (Bytes) 转换为最合适的单位 (B, KB, MB, GB, TB)。
+
+    Args:
+        size_in_bytes (int): 要转换的字节数。
+        decimals (int): 要保留的小数位数，默认为 2。
+
+    Returns:
+        str: 格式化后的文件大小字符串，例如 "1.50 MB"。
+    """
+    # 1. 处理无效或零值
+    if size_in_bytes is None or size_in_bytes == 0:
+        return '0 B'
+
+    # 2. 定义基数和单位列表
+    k = 1024
+    # 使用 Python 的内置的 float() 来确保输入是数字
+    bytes_float = float(size_in_bytes)
+
+    sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+
+    # 3. 计算对数和索引
+    # 使用 math.log 确定最合适的单位索引
+    import math
+    i = math.floor(math.log(bytes_float, k))
+
+    # 4. 确保小数位数的有效性
+    decimals = max(0, decimals)
+
+    # 5. 进行计算和格式化
+    # size_in_bytes / (k ** i) 计算出转换后的数值
+    # 使用 f-string 进行精确格式化
+    value = bytes_float / (k ** i)
+    format_string = f"{{:.{decimals}f}}"
+
+    return f"{format_string.format(value)} {sizes[i]}"
+
+
 @file_bp.route('/', methods=['GET'])
 def file_page():
     parent_id = request.args.get('parent_id')
@@ -93,6 +144,13 @@ def file_page():
 
     # 保证 rows 为 list of dict
     rows = [_row_to_dict(r) for r in rows] if rows else []
+
+    for r in rows:
+        if r['is_dir']:
+            r['icon_class'] = 'folder'
+        else:
+            filetype = (r.get('filetype') or '').lower()
+            r['icon_class'] = ICON_TYPES.get(filetype, 'file')
 
     parent = None
     if parent_id:

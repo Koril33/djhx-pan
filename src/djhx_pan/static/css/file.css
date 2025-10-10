@@ -112,8 +112,41 @@
     background-position: center;
     flex: 0 0 auto;
 }
-.folder { background-image: url('/static/icons/folder.png'); }
-.file  { background-image: url('/static/icons/file.png'); }
+/* 通用文件夹和默认文件图标 */
+.icon.folder {
+    background-image: url('../icons/folder.png');
+    cursor: pointer;
+}
+
+.icon.file {
+    background-image: url('../icons/file.png');
+}
+
+/* 各种文件类型 */
+.icon.pdf {
+    background-image: url('../icons/pdf.png');
+}
+.icon.jpg, .icon.jpeg, .icon.png, .icon.gif, .icon.image {
+    background-image: url('../icons/image.png');
+}
+.icon.txt, .icon.log, .icon.md, .icon.text{
+    background-image: url('../icons/text.png');
+}
+.icon.zip, .icon.rar, .icon.\7z, .icon.archive {
+    background-image: url('../icons/archive.png');
+}
+.icon.mp3, .icon.wav, .icon.audio {
+    background-image: url('../icons/audio.png');
+}
+.icon.mp4, .icon.avi, .icon.mkv, .icon.video {
+    background-image: url('../icons/video.png');
+}
+.icon.csv, .icon.xlsx, .icon.xls, .icon.spreadsheet {
+    background-image: url('../icons/spreadsheet.png');
+}
+.icon.doc, .icon.docx, .icon.word {
+    background-image: url('../icons/word.png');
+}
 
 /* 文件名 */
 .filename {

@@ -77,12 +77,17 @@
                     </div>
 
                     {% if f.is_dir %}
-                        <div class="icon folder" onclick="openDir({{ f.id }})" title="打开文件夹"></div>
+                        <div class="icon {{ f.icon_class }}" onclick="openDir({{ f.id }})" title="打开文件夹"></div>
                     {% else %}
-                        <div class="icon file" title="文件"></div>
+                        <div class="icon {{ f.icon_class|lower }}" title="{{ f.icon_class|upper }} {{ f.filename }}"></div>
                     {% endif %}
 
+
                     <div class="filename" title="{{ f.filename }}">{{ f.filename }}</div>
+                    {% if not f.is_dir %}
+                        <div class="filesize">{{ f.filesize | format_file_size}}</div>
+                    {% endif %}
+                    <div class="file-create-datetime">{{ f.create_datetime[:19].replace('T', ' ') }}</div>
 
                     <div class="actions">
                         {% if not f.is_dir %}
