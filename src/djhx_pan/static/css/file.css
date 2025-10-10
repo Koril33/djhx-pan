@@ -91,9 +91,13 @@
 
 /* 复选框小块 */
 .select-area {
+    /* 图标视图下的定位 */
     position: absolute;
     top: 8px;
     left: 8px;
+    /* 确保复选框本身垂直居中 */
+    display: flex;
+    align-items: center;
 }
 .file-item-wrapper {
     position: relative;
@@ -131,15 +135,27 @@
 
 /* 列表视图覆盖样式 */
 .list-view .file-item {
-    margin-top: 20px;
+    /* margin-top: 20px; <--- 建议移除，或者在 wrapper 上使用 margin-bottom */
     display: flex;
     align-items: center;
     text-align: left;
-    padding: 8px;
+    padding: 8px 12px; /* 增加左右填充 */
     gap: 12px;
     min-height: initial;
     flex-direction: row;
 }
+
+/* 针对列表视图，覆盖复选框的定位 */
+.list-view .file-item-wrapper {
+    /* 增加每个 item 之间的垂直间隔 */
+    margin-bottom: 8px;
+}
+.list-view .file-item-wrapper .select-area {
+    position: static; /* 关键：移除绝对定位 */
+    flex-shrink: 0;
+    padding: 0;
+}
+
 .list-view .icon {
     width: 36px;
     height: 36px;
