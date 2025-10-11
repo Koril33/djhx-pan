@@ -33,26 +33,43 @@
         <a class="btn" href="{{ url_for('file.file_page', parent_id=parent.parent_id) }}">返回上级</a>
     {% endif %}
 
-    <!-- 上传表单（保留用于回退） -->
+    <!-- 上传表单 -->
     <div style="display:flex; gap:8px; align-items:center;">
         <label class="btn primary" id="browseUploadBtn">
             上传文件
             <input type="file" id="fileInput" name="file" style="display:none;" multiple>
         </label>
 
-        <form id="createFolderForm" action="{{ url_for('file.create_folder') }}" method="post" style="display:inline;">
-            <input class="input-inline" type="text" name="folder_name" placeholder="新建文件夹名称" required>
-            <input type="hidden" name="parent_id" value="{{ parent.id if parent else '' }}">
-            <button class="btn" type="submit">创建</button>
-        </form>
+        <!-- 修改：创建目录按钮 -->
+        <button class="btn" id="createFolderBtn">创建目录</button>
     </div>
     <button class="btn danger" id="deleteSelectedBtn" style="margin-left:auto;">删除选中</button>
+</div>
+
+<!-- 创建目录模态框 -->
+<div id="createFolderModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>创建新目录</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="createFolderForm">
+                <input type="text" id="folderNameInput" class="input-inline" placeholder="输入目录名称" required>
+                <input type="hidden" name="parent_id" value="{{ parent.id if parent else '' }}">
+                <div class="modal-actions">
+                    <button type="button" class="btn" id="cancelCreateFolder">取消</button>
+                    <button type="submit" class="btn primary">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- 拖拽上传区域 -->
 <div id="uploadDropzone" class="upload-dropzone">
     <div style="flex:1">
-        将文件拖到此处以上传，或点击“上传文件”选择。<br>
+        将文件拖到此处以上传，或点击"上传文件"选择。<br>
         支持多文件上传。
     </div>
     <div style="width:200px; max-width:40%;">
@@ -107,7 +124,7 @@
                             <a class="btn" href="{{ url_for('file.download_file', file_id=f.id) }}">下载</a>
                         {% endif %}
                         <form action="{{ url_for('file.delete_file_route', file_id=f.id) }}" method="post" style="display:inline;">
-                            <button class="btn" type="submit" onclick="return confirm('确认删除？')">删除</button>
+                            <button class="btn danger" type="submit" onclick="return confirm('确认删除？')">删除</button>
                         </form>
                     </div>
                 </div>
@@ -189,6 +206,71 @@
                 checkbox.checked = !checkbox.checked;
             }
         });
+    });
+
+    /* 创建目录模态框逻辑 */
+    const createFolderBtn = document.getElementById('createFolderBtn');
+    const createFolderModal = document.getElementById('createFolderModal');
+    const createFolderForm = document.getElementById('createFolderForm');
+    const folderNameInput = document.getElementById('folderNameInput');
+    const cancelCreateFolder = document.getElementById('cancelCreateFolder');
+    const closeModal = document.querySelector('.close');
+
+    // 打开模态框
+    createFolderBtn.addEventListener('click', () => {
+        createFolderModal.style.display = 'flex';
+        folderNameInput.focus();
+    });
+
+    // 关闭模态框
+    function closeCreateFolderModal() {
+        createFolderModal.style.display = 'none';
+        createFolderForm.reset();
+    }
+
+    closeModal.addEventListener('click', closeCreateFolderModal);
+    cancelCreateFolder.addEventListener('click', closeCreateFolderModal);
+
+    // 点击模态框外部关闭
+    window.addEventListener('click', (e) => {
+        if (e.target === createFolderModal) {
+            closeCreateFolderModal();
+        }
+    });
+
+    // 处理表单提交
+    createFolderForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const folderName = folderNameInput.value.trim();
+        if (!folderName) {
+            alert('请输入目录名称');
+            return;
+        }
+
+        const parentId = "{{ parent.id if parent else '' }}";
+
+        try {
+            const formData = new FormData();
+            formData.append('folder_name', folderName);
+            formData.append('parent_id', parentId);
+
+            const response = await fetch("{{ url_for('file.create_folder') }}", {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                closeCreateFolderModal();
+                location.reload(); // 刷新页面显示新创建的目录
+            } else {
+                const result = await response.json();
+                alert('创建目录失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            console.error('创建目录错误:', error);
+            alert('创建目录时发生错误');
+        }
     });
 
     /* 文件上传（点击 + 拖拽） */
