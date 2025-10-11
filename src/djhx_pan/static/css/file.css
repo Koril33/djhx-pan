@@ -62,7 +62,7 @@
 #fileContainer.grid-view {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 18px;
+    gap: 60px;
     align-items: start;
 }
 #fileContainer.list-view {
@@ -78,7 +78,7 @@
     transition: box-shadow 0.2s, transform 0.08s;
     background-color: #ffffff;
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* 保持垂直布局 */
     align-items: center;
     gap: 8px;
     min-height: 120px;
@@ -284,6 +284,24 @@
     align-items: center;
     gap: 12px;
     overflow: hidden;
+}
+
+.grid-view .file-name-area {
+    display: flex;
+    flex-direction: column; /* 垂直排列 */
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.grid-view .icon {
+    width: 64px;
+    height: 64px;
+}
+
+.grid-view .filename {
+    text-align: center;
+    width: 100%;
 }
 
 /* 列表视图中的图标尺寸调整 */
