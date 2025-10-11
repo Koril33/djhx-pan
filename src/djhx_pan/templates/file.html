@@ -26,6 +26,13 @@
 </div>
 
 <div class="toolbar">
+
+    <button class="btn" id="toggleViewBtn">切换到列表视图</button>
+
+    {% if parent %}
+        <a class="btn" href="{{ url_for('file.file_page', parent_id=parent.parent_id) }}">返回上级</a>
+    {% endif %}
+
     <!-- 上传表单（保留用于回退） -->
     <div style="display:flex; gap:8px; align-items:center;">
         <label class="btn primary" id="browseUploadBtn">
@@ -39,13 +46,6 @@
             <button class="btn" type="submit">创建</button>
         </form>
     </div>
-
-    {% if parent %}
-        <a class="btn" href="{{ url_for('file.file_page', parent_id=parent.parent_id) }}">返回上级</a>
-    {% endif %}
-
-    <button class="btn" id="toggleViewBtn">切换到列表视图</button>
-
     <button class="btn danger" id="deleteSelectedBtn" style="margin-left:auto;">删除选中</button>
 </div>
 
