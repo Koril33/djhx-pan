@@ -493,10 +493,12 @@ def view_share(share_key):
     # 检查密码（如果有）
     password = share.get('password')
     if password:
-        # 简单实现：通过 GET 参数 ?pwd=xxx 验证（或 session，但为简化用 GET）
         input_pwd = request.args.get('pwd')
-        if input_pwd != password:
-            # 显示密码输入页
+        if input_pwd and input_pwd != password:
+            flash('密码错误', 'error')
+            return render_template('share_password.html', share_key=share_key)
+        elif not input_pwd:
+            flash('请输入密码', 'info')
             return render_template('share_password.html', share_key=share_key)
 
     # 获取被分享的文件/目录
@@ -521,6 +523,9 @@ def view_share(share_key):
         files = [target]
         breadcrumbs = None
         is_dir_view = False
+        for f in files:
+            filetype = (f.get('filetype') or '').lower()
+            f['icon_class'] = ICON_TYPES.get(filetype, 'file')
 
     return render_template(
         'share_view.html',

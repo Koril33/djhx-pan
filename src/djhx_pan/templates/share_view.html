@@ -5,55 +5,9 @@
     <meta charset="UTF-8">
     <title>分享内容</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/file.css') }}">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f9f9f9;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .breadcrumbs {
-            margin-bottom: 16px;
-            font-size: 14px;
-            color: #666;
-        }
-        .file-header, .file-item {
-            display: grid;
-            grid-template-columns: 30px 1fr 100px 160px auto;
-            gap: 12px;
-            align-items: center;
-            padding: 8px 12px;
-        }
-        .file-header {
-            font-weight: bold;
-            background: #eee;
-            border-radius: 4px;
-        }
-        .file-item {
-            background: white;
-            border-radius: 4px;
-            margin-bottom: 8px;
-        }
-        .icon {
-            width: 24px;
-            height: 24px;
-            background: #ccc;
-            border-radius: 4px;
-            display: inline-block;
-        }
-        .folder { background: #4CAF50; }
-        .file { background: #2196F3; }
-        .actions a {
-            margin-left: 8px;
-        }
-    </style>
 </head>
 <body>
-<div class="container">
+<div class="fileContainer">
     <h1>分享内容</h1>
 
     {% if is_dir_view and breadcrumbs %}
@@ -75,20 +29,30 @@
             <div>操作</div>
         </div>
         {% for f in files %}
-        <div class="file-item">
-            <div class="icon {{ 'folder' if f.is_dir else 'file' }}"></div>
-            <div title="{{ f.filename }}">{{ f.filename }}</div>
-            <div>
-                {% if f.is_dir %}-{% else %}{{ f.filesize | format_file_size }}{% endif %}
+            <div class="file-item-wrapper">
+                <div class="file-item">
+
+                    <div class="file-name-area">
+                        {% if f.is_dir %}
+                            <div class="icon {{ f.icon_class }}" onclick="openDir({{ f.id }})" title="打开文件夹"></div>
+                        {% else %}
+                            <div class="icon {{ f.icon_class|lower }}" title="{{ f.icon_class|upper }} {{ f.filename }}"></div>
+                        {% endif %}
+                        <div class="filename" title="{{ f.filename }}">{{ f.filename }}</div>
+                    </div>
+
+                    <div>
+                        {% if f.is_dir %}-{% else %}{{ f.filesize | format_file_size }}{% endif %}
+                    </div>
+                    <div>{{ f.create_datetime[:19].replace('T', ' ') }}</div>
+                    <div class="actions">
+                        {% if not f.is_dir and share.allow_download %}
+                            <a class="btn" href="{{ url_for('file.download_file', file_id=f.id) }}">下载</a>
+                        {% endif %}
+                        <!-- 不显示删除按钮 -->
+                    </div>
+                </div>
             </div>
-            <div>{{ f.create_datetime[:19].replace('T', ' ') }}</div>
-            <div class="actions">
-                {% if not f.is_dir and share.allow_download %}
-                    <a class="btn" href="{{ url_for('file.download_file', file_id=f.id) }}">下载</a>
-                {% endif %}
-                <!-- 不显示删除按钮 -->
-            </div>
-        </div>
         {% endfor %}
     {% else %}
         <p>此分享内容为空。</p>
