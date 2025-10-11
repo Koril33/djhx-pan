@@ -1,6 +1,8 @@
 import datetime
 import logging
 import os
+import secrets
+import string
 from typing import Optional, Dict, Any, List
 
 from flask import Blueprint, request, render_template, send_from_directory, redirect, url_for, flash
@@ -403,6 +405,131 @@ def delete_multiple():
             # 继续删除剩余项
 
     return redirect(url_for('file.file_page', parent_id=parent_id))
+
+
+
+@file_bp.route('/share/<int:file_id>', methods=['POST'])
+def create_share(file_id):
+    """
+    创建分享链接
+    接收 JSON 请求体（由前端 AJAX 发送）：
+    {
+        "password": "123456",  // 可选
+        "expires_in": "3h",    // 可选：1h,3h,6h,12h,1d,3d,7d,never
+        "allow_download": true,
+        "allow_delete": false
+    }
+    返回 { "share_url": "/s/abc123", "error": null }
+    """
+    data = request.get_json()
+    if not data:
+        return {"error": "无效请求"}, 400
+
+    # 验证 file_id 存在
+    row = DB.query("SELECT id FROM t_file WHERE id=?", (file_id,))
+    if not row:
+        return {"error": "文件不存在"}, 404
+
+    # 生成唯一 share_key (8位字母数字)
+    def generate_key():
+        return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+
+    share_key = generate_key()
+    max_attempts = 10
+    for _ in range(max_attempts):
+        if not DB.query("SELECT 1 FROM t_share WHERE share_key=?", (share_key,)):
+            break
+        share_key = generate_key()
+    else:
+        return {"error": "生成分享链接失败，请重试"}, 500
+
+    # 处理过期时间
+    expires_at = None
+    expires_in = data.get('expires_in')
+    if expires_in and expires_in != 'never':
+        now = datetime.datetime.now()
+        mapping = {
+            '1h': datetime.timedelta(hours=1),
+            '3h': datetime.timedelta(hours=3),
+            '6h': datetime.timedelta(hours=6),
+            '12h': datetime.timedelta(hours=12),
+            '1d': datetime.timedelta(days=1),
+            '3d': datetime.timedelta(days=3),
+            '7d': datetime.timedelta(days=7),
+        }
+        if expires_in in mapping:
+            expires_at = (now + mapping[expires_in]).isoformat()
+
+    password = data.get('password') or None
+    allow_download = bool(data.get('allow_download', True))
+    allow_delete = bool(data.get('allow_delete', False))
+
+    created_at = datetime.datetime.now().isoformat()
+
+    DB.execute("""
+        INSERT INTO t_share (file_id, share_key, password, expires_at, allow_download, allow_delete, created_datetime, update_datetime)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (file_id, share_key, password, expires_at, allow_download, allow_delete, created_at, created_at))
+
+    share_url = url_for('file.view_share', share_key=share_key, _external=False)
+    return {"share_url": share_url}
+
+
+@file_bp.route('/s/<share_key>')
+def view_share(share_key):
+    # 查询分享记录
+    shares = DB.query("SELECT * FROM t_share WHERE share_key=?", (share_key,))
+    if not shares:
+        return "分享链接无效或已过期", 404
+
+    share = _row_to_dict(shares[0])
+
+    # 检查是否过期
+    if share['expires_at']:
+        expire_time = datetime.datetime.fromisoformat(share['expires_at'])
+        if datetime.datetime.now() > expire_time:
+            return "分享链接已过期", 410
+
+    # 检查密码（如果有）
+    password = share.get('password')
+    if password:
+        # 简单实现：通过 GET 参数 ?pwd=xxx 验证（或 session，但为简化用 GET）
+        input_pwd = request.args.get('pwd')
+        if input_pwd != password:
+            # 显示密码输入页
+            return render_template('share_password.html', share_key=share_key)
+
+    # 获取被分享的文件/目录
+    file_id = share['file_id']
+    file_row = DB.query("SELECT * FROM t_file WHERE id=?", (file_id,))
+    if not file_row:
+        return "分享内容已被删除", 404
+
+    target = _row_to_dict(file_row[0])
+
+    # 如果是目录，列出其内容；如果是文件，只显示该文件
+    if target['is_dir']:
+        files = DB.query("SELECT * FROM t_file WHERE parent_id=?", (file_id,))
+        files = [_row_to_dict(f) for f in files]
+        for f in files:
+            f['icon_class'] = 'folder' if f['is_dir'] else ICON_TYPES.get((f.get('filetype') or '').lower(), 'file')
+        # 排序：目录在前，按时间倒序
+        files.sort(key=lambda r: (not r['is_dir'], -datetime.datetime.fromisoformat(r['create_datetime']).timestamp() if r['create_datetime'] else 0))
+        breadcrumbs = build_breadcrumbs(file_id)  # 从根到当前目录
+        is_dir_view = True
+    else:
+        files = [target]
+        breadcrumbs = None
+        is_dir_view = False
+
+    return render_template(
+        'share_view.html',
+        files=files,
+        is_dir_view=is_dir_view,
+        breadcrumbs=breadcrumbs,
+        share=share,
+        target=target
+    )
 
 
 # 如果该 Blueprint 注册名不是 file，需要在 blueprint 注册处使用 file_bp

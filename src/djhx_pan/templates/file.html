@@ -66,6 +66,54 @@
     </div>
 </div>
 
+<div id="shareModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>分享 "{{ shareTargetName }}"</h3>
+            <span class="close share-close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="shareForm">
+                <div>
+                    <label><input type="checkbox" id="setPassword"> 设置密码</label>
+                    <input type="password" id="sharePassword" placeholder="输入密码（可选）" style="display:none; margin-top:8px;" disabled>
+                </div>
+
+                <div style="margin:12px 0;">
+                    <label>有效期：</label>
+                    <select id="shareExpire">
+                        <option value="1h">1 小时</option>
+                        <option value="3h">3 小时</option>
+                        <option value="6h">6 小时</option>
+                        <option value="12h">12 小时</option>
+                        <option value="1d" selected>1 天</option>
+                        <option value="3d">3 天</option>
+                        <option value="7d">7 天</option>
+                        <option value="never">永久有效</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label><input type="checkbox" id="allowDownload" checked> 允许下载</label>
+                    <!-- 通常不允许删除，可注释掉 -->
+                    <!-- <label><input type="checkbox" id="allowDelete"> 允许删除</label> -->
+                </div>
+
+                <div class="modal-actions" style="margin-top:16px;">
+                    <button type="button" class="btn" id="cancelShare">取消</button>
+                    <button type="submit" class="btn primary">生成链接</button>
+                </div>
+            </form>
+
+            <div id="shareResult" style="display:none; margin-top:16px; padding:12px; background:#f0f0f0; border-radius:4px;">
+                <p>分享链接已生成：</p>
+                <input type="text" id="shareLinkInput" readonly style="width:94%; padding:6px;">
+                <button class="btn share-btn" onclick="copyShareLink()">复制链接</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 拖拽上传区域 -->
 <div id="uploadDropzone" class="upload-dropzone">
     <div style="flex:1">
@@ -123,6 +171,7 @@
                         {% if not f.is_dir %}
                             <a class="btn" href="{{ url_for('file.download_file', file_id=f.id) }}">下载</a>
                         {% endif %}
+                        <button class="btn share-btn" data-file-id="{{ f.id }}" data-filename="{{ f.filename }}">分享</button>
                         <form action="{{ url_for('file.delete_file_route', file_id=f.id) }}" method="post" style="display:inline;">
                             <button class="btn danger" type="submit" onclick="return confirm('确认删除？')">删除</button>
                         </form>
@@ -351,6 +400,86 @@
 
         // refresh page after uploads complete to show new files
         location.reload();
+    }
+
+
+
+    document.querySelectorAll('.share-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const fileId = btn.dataset.fileId;
+            const filename = btn.dataset.filename;
+            openShareModal(fileId, filename);
+        });
+    });
+
+    let currentShareFileId = null;
+    let currentShareFileName = '';
+
+    function openShareModal(fileId, filename) {
+        currentShareFileId = fileId;
+        currentShareFileName = filename || '文件';
+        document.querySelector('#shareModal .modal-header h3').textContent = `分享 "${currentShareFileName}"`;
+        document.getElementById('shareResult').style.display = 'none';
+        document.getElementById('shareForm').reset();
+        document.getElementById('setPassword').checked = false;
+        document.getElementById('sharePassword').style.display = 'none';
+        document.getElementById('sharePassword').disabled = true;
+        document.getElementById('shareModal').style.display = 'flex';
+    }
+
+    // 密码开关
+    document.getElementById('setPassword').addEventListener('change', function() {
+        const pwdInput = document.getElementById('sharePassword');
+        pwdInput.style.display = this.checked ? 'block' : 'none';
+        pwdInput.disabled = !this.checked;
+        if (!this.checked) pwdInput.value = '';
+    });
+
+    // 关闭模态框
+    function closeShareModal() {
+        document.getElementById('shareModal').style.display = 'none';
+    }
+    document.querySelectorAll('.share-close, #cancelShare').forEach(el => {
+        el.addEventListener('click', closeShareModal);
+    });
+    window.addEventListener('click', (e) => {
+        if (e.target === document.getElementById('shareModal')) closeShareModal();
+    });
+
+    // 提交分享
+    document.getElementById('shareForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const password = document.getElementById('setPassword').checked ? document.getElementById('sharePassword').value : '';
+        const expires_in = document.getElementById('shareExpire').value;
+        const allow_download = document.getElementById('allowDownload').checked;
+        // const allow_delete = document.getElementById('allowDelete')?.checked || false;
+
+        const resp = await fetch(`{{ url_for('file.create_share', file_id=0) }}`.replace('/0', '/' + currentShareFileId), {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                password: password,
+                expires_in: expires_in,
+                allow_download: allow_download,
+                allow_delete: false // 默认不允许
+            })
+        });
+
+        const result = await resp.json();
+        if (result.error) {
+            alert('创建分享失败: ' + result.error);
+            return;
+        }
+
+        document.getElementById('shareLinkInput').value = window.location.origin + result.share_url;
+        document.getElementById('shareResult').style.display = 'block';
+    });
+
+    function copyShareLink() {
+        const input = document.getElementById('shareLinkInput');
+        input.select();
+        document.execCommand('copy');
+        alert('链接已复制到剪贴板');
     }
 </script>
 {% endblock %}

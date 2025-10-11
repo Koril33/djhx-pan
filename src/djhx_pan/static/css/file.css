@@ -22,6 +22,9 @@
     text-decoration: none;
     color: #111827;
 }
+.share-btn {
+    margin-top: 16px;
+}
 .btn:hover { box-shadow: 0 4px 10px rgba(16,24,40,0.08); transform: translateY(-1px); }
 .btn.primary {
     background: linear-gradient(180deg, #2563eb, #1e40af);
