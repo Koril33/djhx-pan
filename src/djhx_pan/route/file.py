@@ -232,6 +232,13 @@ def file_page():
             filetype = (r.get('filetype') or '').lower()
             r['icon_class'] = ICON_TYPES.get(filetype, 'file')
 
+    rows.sort(
+        key=lambda r: (
+            not r['is_dir'],
+            -datetime.datetime.fromisoformat(r['create_datetime']).timestamp() if r['create_datetime'] else 0
+        )
+    )
+
     parent = None
     if parent_id:
         parent_result = DB.query("SELECT * FROM t_file WHERE id=?", (parent_id,))
