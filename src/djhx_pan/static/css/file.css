@@ -54,7 +54,6 @@
 }
 .breadcrumbs .sep { color: #9ca3af; }
 
-
 #fileContainer {
     margin-top: 20px;
 }
@@ -91,11 +90,9 @@
 
 /* 复选框小块 */
 .select-area {
-    /* 图标视图下的定位 */
     position: absolute;
     top: 8px;
     left: 8px;
-    /* 确保复选框本身垂直居中 */
     display: flex;
     align-items: center;
 }
@@ -117,32 +114,16 @@
     background-image: url('../icons/folder.png');
     cursor: pointer;
 }
-
 .icon.file {
     background-image: url('../icons/file.png');
 }
 
 /* 文档类 */
-.icon.pdf {
-    background-image: url('../icons/pdf.png');
-}
-
-.icon.markdown {
-    background-image: url('../icons/markdown.png');
-}
-
-.icon.json {
-    background-image: url('../icons/json.png');
-}
-
-.icon.python {
-    background-image: url('../icons/python.png');
-}
-
-.icon.java {
-    background-image: url('../icons/java.png');
-}
-
+.icon.pdf { background-image: url('../icons/pdf.png'); }
+.icon.markdown { background-image: url('../icons/markdown.png'); }
+.icon.json { background-image: url('../icons/json.png'); }
+.icon.python { background-image: url('../icons/python.png'); }
+.icon.java { background-image: url('../icons/java.png'); }
 .icon.txt, .icon.log, .icon.text, .icon.rtf, .icon.xml, .icon.yml, .icon.toml {
     background-image: url('../icons/text.png');
 }
@@ -218,21 +199,11 @@
 }
 
 /* 其他常见文件 */
-.icon.torrent {
-    background-image: url('../icons/torrent.png');
-}
-.icon.url, .icon.lnk {
-    background-image: url('../icons/link.png');
-}
-.icon.eml, .icon.msg {
-    background-image: url('../icons/mail.png');
-}
-.icon.ics {
-    background-image: url('../icons/calendar.png');
-}
-.icon.crt, .icon.pem, .icon.key {
-    background-image: url('../icons/certificate.png');
-}
+.icon.torrent { background-image: url('../icons/torrent.png'); }
+.icon.url, .icon.lnk { background-image: url('../icons/link.png'); }
+.icon.eml, .icon.msg { background-image: url('../icons/mail.png'); }
+.icon.ics { background-image: url('../icons/calendar.png'); }
+.icon.crt, .icon.pem, .icon.key { background-image: url('../icons/certificate.png'); }
 
 /* 电子书类 */
 .icon.epub, .icon.mobi, .icon.azw3, .icon.cbz, .icon.cbr, .icon.ebook {
@@ -243,8 +214,6 @@
 .icon.env, .icon.properties, .icon.ini, .icon.cfg, .icon.conf, .icon.yaml, .icon.config {
     background-image: url('../icons/config.png');
 }
-
-
 
 /* 文件名 */
 .filename {
@@ -264,36 +233,74 @@
     align-items: center;
 }
 
-/* 列表视图覆盖样式 */
-.list-view .file-item {
-    /* margin-top: 20px; <--- 建议移除，或者在 wrapper 上使用 margin-bottom */
-    display: flex;
+/* ===== 列表视图改进 ===== */
+.file-header {
+    display: none; /* 默认隐藏 */
+    grid-template-columns: 40px 1fr 120px 180px 180px;
     align-items: center;
-    text-align: left;
-    padding: 8px 12px; /* 增加左右填充 */
-    gap: 12px;
-    min-height: initial;
-    flex-direction: row;
+    font-weight: 600;
+    border-bottom: 1px solid #ddd;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    color: #333;
+    font-size: 14px;
+    margin-top: 2%;
 }
 
-/* 针对列表视图，覆盖复选框的定位 */
+/* 列表模式下 */
+.list-view .file-header {
+    display: grid;
+}
+
+.list-view .file-item {
+    display: grid;
+    grid-template-columns: 40px 1fr 120px 180px 180px; /* 与 header 一致 */
+    align-items: center;
+    text-align: left;
+    padding: 8px 12px;
+    gap: 12px;
+    border-bottom: 1px solid #eee;
+    border-radius: 0;
+    box-shadow: none;
+    min-height: auto;
+}
+.list-view .file-item:hover {
+    box-shadow: 0 4px 10px rgba(16,24,40,0.06);
+    transform: none;
+}
+
 .list-view .file-item-wrapper {
-    /* 增加每个 item 之间的垂直间隔 */
-    margin-bottom: 8px;
+    margin-bottom: 0;
 }
 .list-view .file-item-wrapper .select-area {
-    position: static; /* 关键：移除绝对定位 */
+    position: static;
     flex-shrink: 0;
     padding: 0;
 }
 
+/* 文件名区域 - 图标和文件名在同一列 */
+.file-name-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+}
+
+/* 列表视图中的图标尺寸调整 */
 .list-view .icon {
     width: 36px;
     height: 36px;
     margin: 0;
+    flex-shrink: 0;
 }
+
+/* 列表视图中的文件名样式调整 */
 .list-view .filename {
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 /* 空目录提示 */
@@ -340,8 +347,29 @@
 }
 
 /* 响应式 */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .toolbar { gap: 6px; }
     .file-item { padding: 10px; }
     #fileContainer.grid-view { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+
+    /* 小屏下隐藏部分列 */
+    .list-view .file-item,
+    .file-header {
+        grid-template-columns: 40px 1fr 120px;
+    }
+    .list-view .file-create-datetime,
+    .list-view .actions,
+    .file-header .col-time,
+    .file-header .col-actions {
+        display: none;
+    }
+
+    /* 小屏幕下调整文件名区域 */
+    .list-view .file-name-area {
+        gap: 8px;
+    }
+    .list-view .icon {
+        width: 28px;
+        height: 28px;
+    }
 }

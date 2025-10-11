@@ -67,6 +67,15 @@
     <input type="hidden" name="selected_ids" id="selectedIdsInput" value="">
 </form>
 
+
+<div id="fileHeader" class="file-header">
+    <div class="col-checkbox"></div>
+    <div class="col-name">文件名</div>
+    <div class="col-size">大小</div>
+    <div class="col-time">修改时间</div>
+    <div class="col-actions">操作</div>
+</div>
+
 <div id="fileContainer" class="grid-view">
     {% if files %}
         {% for f in files %}
@@ -76,15 +85,19 @@
                         <input type="checkbox" class="select-checkbox" value="{{ f.id }}">
                     </div>
 
+                    <!-- 将图标和文件名放在同一个容器中 -->
+                    <div class="file-name-area">
+                        {% if f.is_dir %}
+                            <div class="icon {{ f.icon_class }}" onclick="openDir({{ f.id }})" title="打开文件夹"></div>
+                        {% else %}
+                            <div class="icon {{ f.icon_class|lower }}" title="{{ f.icon_class|upper }} {{ f.filename }}"></div>
+                        {% endif %}
+                        <div class="filename" title="{{ f.filename }}">{{ f.filename }}</div>
+                    </div>
+
                     {% if f.is_dir %}
-                        <div class="icon {{ f.icon_class }}" onclick="openDir({{ f.id }})" title="打开文件夹"></div>
+                        <div> - </div>
                     {% else %}
-                        <div class="icon {{ f.icon_class|lower }}" title="{{ f.icon_class|upper }} {{ f.filename }}"></div>
-                    {% endif %}
-
-
-                    <div class="filename" title="{{ f.filename }}">{{ f.filename }}</div>
-                    {% if not f.is_dir %}
                         <div class="filesize">{{ f.filesize | format_file_size}}</div>
                     {% endif %}
                     <div class="file-create-datetime">{{ f.create_datetime[:19].replace('T', ' ') }}</div>
@@ -106,152 +119,156 @@
 </div>
 
 <script>
-function openDir(id) {
-    location.href = `{{ url_for('file.file_page') }}?parent_id=${id}`;
-}
+    function openDir(id) {
+        location.href = `{{ url_for('file.file_page') }}?parent_id=${id}`;
+    }
 
-/* 视图切换 */
-const toggleBtn = document.getElementById('toggleViewBtn');
-const container = document.getElementById('fileContainer');
-let currentView = localStorage.getItem('viewMode') || 'grid';
-applyView(currentView);
-toggleBtn.addEventListener('click', () => {
-    currentView = (currentView === 'grid') ? 'list' : 'grid';
-    localStorage.setItem('viewMode', currentView);
+    /* 视图切换 */
+    const toggleBtn = document.getElementById('toggleViewBtn');
+    const container = document.getElementById('fileContainer');
+    let currentView = localStorage.getItem('viewMode') || 'grid';
     applyView(currentView);
-});
-function applyView(mode) {
-    if (mode === 'grid') {
-        container.classList.add('grid-view');
-        container.classList.remove('list-view');
-        toggleBtn.textContent = '切换到列表视图';
-    } else {
-        container.classList.add('list-view');
-        container.classList.remove('grid-view');
-        toggleBtn.textContent = '切换到图标视图';
-    }
-}
-
-/* 多选删除逻辑 */
-const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
-const multiDeleteForm = document.getElementById('multiDeleteForm');
-const selectedIdsInput = document.getElementById('selectedIdsInput');
-
-function getSelectedIds() {
-    const boxes = document.querySelectorAll('.select-checkbox:checked');
-    return Array.from(boxes).map(cb => cb.value);
-}
-
-deleteSelectedBtn.addEventListener('click', () => {
-    const ids = getSelectedIds();
-    if (!ids.length) {
-        alert('请先选择要删除的项');
-        return;
-    }
-    if (!confirm('确认删除所选项？（删除后不可恢复）')) return;
-    selectedIdsInput.value = ids.join(',');
-    multiDeleteForm.submit();
-});
-
-/* 点击图片/文件自动切换选择（小交互） */
-document.querySelectorAll('.file-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-        // 排除：
-        // 1. 如果点击的是链接、按钮或表单
-        // 2. 如果点击目标是复选框本身或其父容器 (.select-area)
-        if (e.target.tagName === 'A' ||
-            e.target.tagName === 'BUTTON' ||
-            e.target.closest('form') ||
-            e.target.closest('.select-area')) {
-            return; // 遇到这些元素，直接跳过自定义的 checkbox 切换逻辑
+    toggleBtn.addEventListener('click', () => {
+        currentView = (currentView === 'grid') ? 'list' : 'grid';
+        localStorage.setItem('viewMode', currentView);
+        applyView(currentView);
+    });
+    function applyView(mode) {
+        const header = document.getElementById('fileHeader');
+        if (mode === 'grid') {
+            container.classList.add('grid-view');
+            container.classList.remove('list-view');
+            toggleBtn.textContent = '切换到列表视图';
+            header.style.display = 'none';
         }
+        else {
+            container.classList.add('list-view');
+            container.classList.remove('grid-view');
+            toggleBtn.textContent = '切换到图标视图';
+            header.style.display = 'grid';
+        }
+    }
 
-        // 否则，执行通过点击文件卡片主体来切换复选框的状态
-        const checkbox = item.parentElement.querySelector('.select-checkbox');
-        if (checkbox) {
-            checkbox.checked = !checkbox.checked;
+    /* 多选删除逻辑 */
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const multiDeleteForm = document.getElementById('multiDeleteForm');
+    const selectedIdsInput = document.getElementById('selectedIdsInput');
+
+    function getSelectedIds() {
+        const boxes = document.querySelectorAll('.select-checkbox:checked');
+        return Array.from(boxes).map(cb => cb.value);
+    }
+
+    deleteSelectedBtn.addEventListener('click', () => {
+        const ids = getSelectedIds();
+        if (!ids.length) {
+            alert('请先选择要删除的项');
+            return;
+        }
+        if (!confirm('确认删除所选项？（删除后不可恢复）')) return;
+        selectedIdsInput.value = ids.join(',');
+        multiDeleteForm.submit();
+    });
+
+    /* 点击图片/文件自动切换选择（小交互） */
+    document.querySelectorAll('.file-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            // 排除：
+            // 1. 如果点击的是链接、按钮或表单
+            // 2. 如果点击目标是复选框本身或其父容器 (.select-area)
+            if (e.target.tagName === 'A' ||
+                e.target.tagName === 'BUTTON' ||
+                e.target.closest('form') ||
+                e.target.closest('.select-area')) {
+                return; // 遇到这些元素，直接跳过自定义的 checkbox 切换逻辑
+            }
+
+            // 否则，执行通过点击文件卡片主体来切换复选框的状态
+            const checkbox = item.parentElement.querySelector('.select-checkbox');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+        });
+    });
+
+    /* 文件上传（点击 + 拖拽） */
+    const fileInput = document.getElementById('fileInput');
+    const browseBtn = document.getElementById('browseUploadBtn');
+    const uploadDropzone = document.getElementById('uploadDropzone');
+    const parentId = "{{ parent.id if parent else '' }}";
+    const globalProgress = document.getElementById('globalProgress');
+    const globalProgressBar = document.getElementById('globalProgressBar');
+
+    browseBtn.addEventListener('click', (e) => {
+        // fileInput is hidden; clicking label triggers it
+        // nothing else needed
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+        const files = e.target.files;
+        if (files.length) {
+            await uploadFiles(files);
+            fileInput.value = '';
         }
     });
-});
 
-/* 文件上传（点击 + 拖拽） */
-const fileInput = document.getElementById('fileInput');
-const browseBtn = document.getElementById('browseUploadBtn');
-const uploadDropzone = document.getElementById('uploadDropzone');
-const parentId = "{{ parent.id if parent else '' }}";
-const globalProgress = document.getElementById('globalProgress');
-const globalProgressBar = document.getElementById('globalProgressBar');
-
-browseBtn.addEventListener('click', (e) => {
-    // fileInput is hidden; clicking label triggers it
-    // nothing else needed
-});
-
-fileInput.addEventListener('change', async (e) => {
-    const files = e.target.files;
-    if (files.length) {
-        await uploadFiles(files);
-        fileInput.value = '';
-    }
-});
-
-/* 拖拽事件 */
-['dragenter','dragover'].forEach(ev => {
-    uploadDropzone.addEventListener(ev, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        uploadDropzone.classList.add('dragover');
+    /* 拖拽事件 */
+    ['dragenter','dragover'].forEach(ev => {
+        uploadDropzone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadDropzone.classList.add('dragover');
+        });
     });
-});
-['dragleave','drop'].forEach(ev => {
-    uploadDropzone.addEventListener(ev, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        uploadDropzone.classList.remove('dragover');
+    ['dragleave','drop'].forEach(ev => {
+        uploadDropzone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadDropzone.classList.remove('dragover');
+        });
     });
-});
 
-uploadDropzone.addEventListener('drop', async (e) => {
-    const dt = e.dataTransfer;
-    if (!dt) return;
-    const files = dt.files;
-    if (files && files.length) {
-        await uploadFiles(files);
-    }
-});
-
-/* 上传函数：使用 fetch + FormData */
-async function uploadFiles(fileList) {
-    const files = Array.from(fileList);
-    // Show global progress
-    globalProgress.style.display = 'block';
-    globalProgressBar.style.width = '0%';
-
-    let uploaded = 0;
-
-    // sequentially upload to keep server load friendly; you can adapt to parallel if needed
-    for (const file of files) {
-        const form = new FormData();
-        form.append('file', file);
-        form.append('parent_id', parentId);
-
-        try {
-            // use fetch to POST to upload endpoint
-            const resp = await fetch("{{ url_for('file.upload_file') }}", {
-                method: 'POST',
-                body: form,
-            });
-            // treat any response as success for UI; server will handle validation and redirect
-        } catch (err) {
-            console.error('上传失败', err);
+    uploadDropzone.addEventListener('drop', async (e) => {
+        const dt = e.dataTransfer;
+        if (!dt) return;
+        const files = dt.files;
+        if (files && files.length) {
+            await uploadFiles(files);
         }
-        uploaded++;
-        const pct = Math.round((uploaded / files.length) * 100);
-        globalProgressBar.style.width = pct + '%';
-    }
+    });
 
-    // refresh page after uploads complete to show new files
-    location.reload();
-}
+    /* 上传函数：使用 fetch + FormData */
+    async function uploadFiles(fileList) {
+        const files = Array.from(fileList);
+        // Show global progress
+        globalProgress.style.display = 'block';
+        globalProgressBar.style.width = '0%';
+
+        let uploaded = 0;
+
+        // sequentially upload to keep server load friendly; you can adapt to parallel if needed
+        for (const file of files) {
+            const form = new FormData();
+            form.append('file', file);
+            form.append('parent_id', parentId);
+
+            try {
+                // use fetch to POST to upload endpoint
+                const resp = await fetch("{{ url_for('file.upload_file') }}", {
+                    method: 'POST',
+                    body: form,
+                });
+                // treat any response as success for UI; server will handle validation and redirect
+            } catch (err) {
+                console.error('上传失败', err);
+            }
+            uploaded++;
+            const pct = Math.round((uploaded / files.length) * 100);
+            globalProgressBar.style.width = pct + '%';
+        }
+
+        // refresh page after uploads complete to show new files
+        location.reload();
+    }
 </script>
 {% endblock %}
