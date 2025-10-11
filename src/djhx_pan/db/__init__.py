@@ -42,3 +42,8 @@ class DB:
             return [dict(row) for row in rows]
         finally:
             conn.close()
+
+    @staticmethod
+    def query_one(sql, params=()):
+        rows = DB.query(sql, params)
+        return rows[0] if rows else None

@@ -492,8 +492,8 @@ def view_share(share_key):
 
     # 检查密码（如果有）
     password = share.get('password')
+    input_pwd = request.args.get('pwd')
     if password:
-        input_pwd = request.args.get('pwd')
         if input_pwd and input_pwd != password:
             flash('密码错误', 'error')
             return render_template('share_password.html', share_key=share_key)
@@ -501,39 +501,69 @@ def view_share(share_key):
             flash('请输入密码', 'info')
             return render_template('share_password.html', share_key=share_key)
 
-    # 获取被分享的文件/目录
     file_id = share['file_id']
-    file_row = DB.query("SELECT * FROM t_file WHERE id=?", (file_id,))
-    if not file_row:
+    base_file = DB.query_one("SELECT * FROM t_file WHERE id=?", (file_id,))
+    if not base_file:
         return "分享内容已被删除", 404
+    base_file = _row_to_dict(base_file)
 
-    target = _row_to_dict(file_row[0])
+    # 获取 path 参数（如 "folder1/folder2"）
+    path = request.args.get('path', '').strip('/')
+    current_path_parts = [p for p in path.split('/') if p] if path else []
 
-    # 如果是目录，列出其内容；如果是文件，只显示该文件
-    if target['is_dir']:
-        files = DB.query("SELECT * FROM t_file WHERE parent_id=?", (file_id,))
-        files = [_row_to_dict(f) for f in files]
-        for f in files:
-            f['icon_class'] = 'folder' if f['is_dir'] else ICON_TYPES.get((f.get('filetype') or '').lower(), 'file')
-        # 排序：目录在前，按时间倒序
-        files.sort(key=lambda r: (not r['is_dir'], -datetime.datetime.fromisoformat(r['create_datetime']).timestamp() if r['create_datetime'] else 0))
-        breadcrumbs = build_breadcrumbs(file_id)  # 从根到当前目录
-        is_dir_view = True
+    # 从 base_file 开始，逐级解析 path
+    current_id = base_file['id']
+    breadcrumbs = []
+
+    if base_file['is_dir']:
+        # 如果分享的是目录，则根就是它
+        breadcrumbs.append({'id': base_file['id'], 'filename': base_file['filename']})
+        for part in current_path_parts:
+            # 查找当前目录下名为 `part` 的子目录
+            child = DB.query_one(
+                "SELECT id, filename FROM t_file WHERE parent_id=? AND filename=? AND is_dir=1",
+                (current_id, part)
+            )
+            if not child:
+                return "路径不存在", 404
+            child = _row_to_dict(child)
+            breadcrumbs.append(child)
+            current_id = child['id']
     else:
-        files = [target]
-        breadcrumbs = None
-        is_dir_view = False
-        for f in files:
-            filetype = (f.get('filetype') or '').lower()
-            f['icon_class'] = ICON_TYPES.get(filetype, 'file')
+        # 分享的是单个文件，不允许 path 导航
+        if path:
+            return "无效路径", 404
+        # 直接显示该文件
+        files = [base_file]
+        return render_template(
+            'share_view.html',
+            files=files,
+            is_dir_view=False,
+            breadcrumbs=None,
+            share=share,
+            target=base_file,
+            current_path=path,
+            share_key=share_key
+        )
+
+    # 现在 current_id 是最终要展示的目录
+    files = DB.query("SELECT * FROM t_file WHERE parent_id=?", (current_id,))
+    files = [_row_to_dict(f) for f in files]
+    for f in files:
+        f['icon_class'] = 'folder' if f['is_dir'] else ICON_TYPES.get((f.get('filetype') or '').lower(), 'file')
+    files.sort(key=lambda r: (not r['is_dir'],
+                              -datetime.datetime.fromisoformat(r['create_datetime']).timestamp() if r['create_datetime'] else 0))
 
     return render_template(
         'share_view.html',
         files=files,
-        is_dir_view=is_dir_view,
+        is_dir_view=True,
         breadcrumbs=breadcrumbs,
         share=share,
-        target=target
+        target=base_file,
+        current_path=path,
+        share_key=share_key,
+        password=input_pwd,
     )
 
 

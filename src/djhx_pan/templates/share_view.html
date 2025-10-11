@@ -34,7 +34,12 @@
 
                     <div class="file-name-area">
                         {% if f.is_dir %}
-                            <div class="icon {{ f.icon_class }}" onclick="openDir({{ f.id }})" title="打开文件夹"></div>
+                            {% set new_path = (current_path + '/' + f.filename) if current_path else f.filename %}
+                            <a href="{{ url_for('file.view_share', share_key=share_key) }}?path={{ new_path|urlencode }}{% if password %}&pwd={{ password }}{% endif %}"
+                               style="text-decoration: none; color: inherit; display: flex; align-items: center;">
+                                <div class="icon {{ f.icon_class }}" title="打开文件夹"></div>
+                                <div class="filename" title="{{ f.filename }}">{{ f.filename }}</div>
+                            </a>
                         {% else %}
                             <div class="icon {{ f.icon_class|lower }}" title="{{ f.icon_class|upper }} {{ f.filename }}"></div>
                         {% endif %}
