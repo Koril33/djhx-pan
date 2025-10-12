@@ -1,6 +1,36 @@
-CREATE TABLE IF NOT EXISTS t_user
+create table main.t_file
 (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    id              INTEGER
+        primary key autoincrement,
+    filename        TEXT not null,
+    filesize        INTEGER,
+    filetype        TEXT,
+    filepath        TEXT,
+    parent_id       INTEGER default NULL,
+    is_dir          INTEGER default 0,
+    create_datetime TEXT,
+    update_datetime TEXT
+);
+
+create table main.t_share
+(
+    id               INTEGER
+        primary key autoincrement,
+    file_id          INTEGER not null,
+    share_key        TEXT    not null
+        unique,
+    password         TEXT,
+    expires_at       TEXT,
+    allow_download   BOOLEAN default 1,
+    allow_delete     BOOLEAN default 0,
+    created_datetime TEXT    not null,
+    update_datetime  TEXT    not null
+);
+
+create table main.t_user
+(
+    id              INTEGER
+        primary key autoincrement,
     username        TEXT,
     password        TEXT,
     salt            TEXT,
@@ -11,15 +41,4 @@ CREATE TABLE IF NOT EXISTS t_user
     update_datetime TEXT
 );
 
-CREATE TABLE IF NOT EXISTS t_file
-(
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    filename        TEXT NOT NULL,
-    filesize        INTEGER,
-    filetype        TEXT,
-    filepath        TEXT,                   -- 存储相对路径，比如 /upload/family/xxx.jpg
-    parent_id       INTEGER DEFAULT NULL,   -- 层级结构：父目录ID
-    is_dir          INTEGER DEFAULT 0,      -- 是否是目录 (0=文件, 1=目录)
-    create_datetime TEXT,
-    update_datetime TEXT
-);
+

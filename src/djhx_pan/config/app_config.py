@@ -1,3 +1,6 @@
+import platform
+
+
 class AppConfig(object):
     # 存储公共配置
     PROJECT_NAME = "djhx-pan"
@@ -10,8 +13,13 @@ class AppConfig(object):
 
 class DevelopmentConfig(AppConfig):
     # 存储开发环境中的配置
-    DB_NAME = "C:\\Project\\MyProject\\djhx-pan\\djhx-pan.db"
-    UPLOAD_FOLDER = "C:\\Project\\MyProject\\djhx-pan\\uploads"
+    if platform.system().lower() == 'windows':
+        DB_NAME = "C:\\Project\\MyProject\\djhx-pan\\djhx-pan.db"
+        UPLOAD_FOLDER = "C:\\Project\\MyProject\\djhx-pan\\uploads"
+    else:
+        DB_NAME = "/home/koril/project/python/djhx-pan/djhx-pan.db"
+        UPLOAD_FOLDER = "/home/koril/project/python/djhx-pan/uploads"
+
 
 class ProductionConfig(AppConfig):
     # 存储生产环境中的配置
