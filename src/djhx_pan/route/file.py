@@ -534,6 +534,7 @@ def view_share(share_key):
         if path:
             return "无效路径", 404
         # 直接显示该文件
+        base_file['icon_class'] = ICON_TYPES.get((base_file.get('filetype') or '').lower(), 'file')
         files = [base_file]
         return render_template(
             'share_view.html',
@@ -567,5 +568,67 @@ def view_share(share_key):
     )
 
 
-# 如果该 Blueprint 注册名不是 file，需要在 blueprint 注册处使用 file_bp
-# app.register_blueprint(file_bp)
+@file_bp.route('/share_page')
+def share_page():
+    """分享管理页面"""
+    shares = DB.query("""
+        SELECT s.*, f.filename
+        FROM t_share s
+        LEFT JOIN t_file f ON s.file_id = f.id
+        ORDER BY s.created_datetime DESC
+    """)
+    shares = [_row_to_dict(s) for s in shares]
+
+    # 格式化字段
+    for s in shares:
+        s['share_url'] = url_for('file.view_share', share_key=s['share_key'], _external=False)
+        if s.get('expires_at'):
+            try:
+                dt = datetime.datetime.fromisoformat(s['expires_at'])
+                s['expires_display'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+            except Exception:
+                s['expires_display'] = s['expires_at']
+        else:
+            s['expires_display'] = '永久'
+
+    return render_template('share_page.html', shares=shares)
+
+
+@file_bp.route('/share/<int:share_id>/delete', methods=['POST'])
+def delete_share(share_id):
+    DB.execute("DELETE FROM t_share WHERE id=?", (share_id,))
+    flash("已删除分享记录", "success")
+    return redirect(url_for('file.share_page'))
+
+
+@file_bp.route('/share/<int:share_id>/update', methods=['POST'])
+def update_share(share_id):
+    """更新分享配置（密码、有效期、下载权限）"""
+    password = request.form.get('password') or None
+    expires_in = request.form.get('expires_in')
+    allow_download = request.form.get('allow_download') == 'on'
+
+    expires_at = None
+    if expires_in and expires_in != 'never':
+        now = datetime.datetime.now()
+        mapping = {
+            '1h': datetime.timedelta(hours=1),
+            '3h': datetime.timedelta(hours=3),
+            '6h': datetime.timedelta(hours=6),
+            '12h': datetime.timedelta(hours=12),
+            '1d': datetime.timedelta(days=1),
+            '3d': datetime.timedelta(days=3),
+            '7d': datetime.timedelta(days=7),
+        }
+        if expires_in in mapping:
+            expires_at = (now + mapping[expires_in]).isoformat()
+
+    DB.execute("""
+        UPDATE t_share
+        SET password=?, expires_at=?, allow_download=?, update_datetime=?
+        WHERE id=?
+    """, (password, expires_at, allow_download, datetime.datetime.now().isoformat(), share_id))
+
+    flash("已更新分享设置", "success")
+    return redirect(url_for('file.share_page'))
+

@@ -4,22 +4,54 @@
     <title>{% block title %}{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
     {% block head %}{% endblock %}
 </head>
 <body>
-    <div class="sidebar">
-        <h2>DJHX-Pan</h2>
-        <ul>
-            <li>
-                <a href="{{ url_for('file.file_page') }}" {% if request.endpoint == 'file.file_page' %}class="active"{% endif %}>文件管理</a>
-            </li>
-            <li>
-                <a href="{{ url_for('user.page') }}" {% if request.endpoint == 'user.page' %}class="active"{% endif %}>用户管理</a>
-            </li>
-        </ul>
+
+    <nav class="navbar">
+        <div class="nav-left">
+            <h2>DJHX-Pan</h2>
+        </div>
+        <div class="nav-right">
+            {% if session.get('user') %}
+                <div class="dropdown">
+                    <span class="username">Hi, {{ session['user']['username'] }} ▼</span>
+                    <div class="dropdown-content">
+                        <a href="/dashboard">Dashboard</a>
+                        <a href="/logout">Logout</a>
+                    </div>
+                </div>
+            {% else %}
+                <a href="/login">Sign in</a>
+                <a href="/register">Sign up</a>
+            {% endif %}
+        </div>
+        <!-- 手机端汉堡按钮 -->
+        <div class="hamburger" onclick="document.body.classList.toggle('nav-open')">
+            ☰
+        </div>
+    </nav>
+    <div class="main">
+        <div class="sidebar">
+
+            <ul>
+                <li>
+                    <a href="{{ url_for('file.file_page') }}" {% if request.endpoint == 'file.file_page' %}class="active"{% endif %}>文件管理</a>
+                </li>
+                <li>
+                    <a href="{{ url_for('user.page') }}" {% if request.endpoint == 'user.page' %}class="active"{% endif %}>用户管理</a>
+                </li>
+                <li>
+                    <a href="{{ url_for('file.share_page') }}" {% if request.endpoint == 'share.page' %}class="active"{% endif %}>分享管理</a>
+                </li>
+
+            </ul>
+        </div>
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
     </div>
-    <div class="content">
-        {% block content %}{% endblock %}
-    </div>
+
 </body>
 </html>

@@ -1,8 +1,13 @@
 body {
-    font-family: sans-serif;
     display: flex;
+    flex-direction: column;
     min-height: 100vh;
     margin: 0;
+}
+
+.main {
+    display: flex;
+    flex-grow: 1;
 }
 
 .sidebar {
