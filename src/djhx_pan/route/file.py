@@ -9,7 +9,7 @@ from flask import Blueprint, request, render_template, send_from_directory, redi
 
 from ..config.app_config import AppConfig
 from ..db import DB
-from ..util import safe_secure_filename
+from ..util import safe_secure_filename, login_required
 
 app_logger = logging.getLogger(AppConfig.PROJECT_NAME + "." + __name__)
 
@@ -216,6 +216,7 @@ def format_file_size(size_in_bytes, decimals=2):
 
 
 @file_bp.route('/', methods=['GET'])
+@login_required
 def file_page():
     parent_id = request.args.get('parent_id')
     if parent_id:
@@ -253,6 +254,7 @@ def file_page():
 
 
 @file_bp.route('/upload', methods=['POST'])
+@login_required
 def upload_file():
     # 支持传统表单上传（file input）和 fetch 上传（multipart）
     if 'file' not in request.files:
@@ -318,6 +320,7 @@ def upload_file():
 
 
 @file_bp.route('/create-folder', methods=['POST'])
+@login_required
 def create_folder():
     name = request.form.get('folder_name')
     parent_id = request.form.get('parent_id')
@@ -353,6 +356,7 @@ def download_file(file_id):
 
 
 @file_bp.route('/delete/<int:file_id>', methods=['POST'])
+@login_required
 def delete_file_route(file_id):
     rows = DB.query("SELECT * FROM t_file WHERE id=?", (file_id,))
     if not rows:
@@ -371,6 +375,7 @@ def delete_file_route(file_id):
 
 
 @file_bp.route('/delete-multiple', methods=['POST'])
+@login_required
 def delete_multiple():
     """
     处理批量删除请求。前端传来 selected_ids 字符串（逗号分隔）。
@@ -409,6 +414,7 @@ def delete_multiple():
 
 
 @file_bp.route('/share/<int:file_id>', methods=['POST'])
+@login_required
 def create_share(file_id):
     """
     创建分享链接
@@ -569,6 +575,7 @@ def view_share(share_key):
 
 
 @file_bp.route('/share_page')
+@login_required
 def share_page():
     """分享管理页面"""
     shares = DB.query("""
@@ -595,6 +602,7 @@ def share_page():
 
 
 @file_bp.route('/share/<int:share_id>/delete', methods=['POST'])
+@login_required
 def delete_share(share_id):
     DB.execute("DELETE FROM t_share WHERE id=?", (share_id,))
     flash("已删除分享记录", "success")
@@ -602,6 +610,7 @@ def delete_share(share_id):
 
 
 @file_bp.route('/share/<int:share_id>/update', methods=['POST'])
+@login_required
 def update_share(share_id):
     """更新分享配置（密码、有效期、下载权限）"""
     password = request.form.get('password') or None
