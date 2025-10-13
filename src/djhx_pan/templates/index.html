@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block head %}
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/file.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/preview.css') }}">
 {% endblock %}
 {% block title %}首页{% endblock %}
 
@@ -65,7 +66,11 @@
                         <div>{{ f.create_datetime[:19].replace('T', ' ') }}</div>
                         <div class="actions">
                             <a class="btn" href="{{ url_for('file.download_file', file_id=f.file_id) }}">下载</a>
-                            <!-- 不显示删除按钮 -->
+                            {% if f.filetype in ['jpg', 'jpeg', 'png'] %}
+                                <button class="btn preview-btn" onclick="openPreview('{{ url_for('file.download_file', file_id=f.file_id) }}')">预览</button>
+                            {% elif f.filetype in ['txt', 'html', 'py', 'java', 'log', 'json'] %}
+                                <button class="btn preview-btn" onclick="openTextPreview('{{ url_for('file.download_file', file_id=f.file_id) }}')">预览</button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -74,4 +79,23 @@
             <p>暂无公开文件内容</p>
         {% endif %}
     </div>
+
+
+    <!-- 预览图片弹窗 -->
+    <div id="imagePreviewModal" class="modal" onclick="closePreview(event)">
+        <div class="modal-content" id="modalContent">
+            <span class="close" onclick="closePreview(event)">×</span>
+            <img id="previewImage" src="" alt="预览" />
+        </div>
+    </div>
+
+    <!-- 文本预览弹窗 -->
+    <div id="textPreviewModal" class="modal" onclick="closePreview(event)">
+        <div class="modal-content" id="textModalContent">
+            <span class="close" onclick="closePreview(event)">×</span>
+            <pre id="textPreviewContent" class="language-none"></pre>
+        </div>
+    </div>
+
+<script src="{{ url_for('static', filename='js/preview.js') }}"></script>
 {% endblock %}
