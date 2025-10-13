@@ -17,8 +17,8 @@ class DevelopmentConfig(AppConfig):
         DB_NAME = "C:\\Project\\MyProject\\djhx-pan\\djhx-pan.db"
         UPLOAD_FOLDER = "C:\\Project\\MyProject\\djhx-pan\\uploads"
     else:
-        DB_NAME = "/home/koril/project/python/djhx-pan/djhx-pan.db"
-        UPLOAD_FOLDER = "/home/koril/project/python/djhx-pan/uploads"
+        DB_NAME = "/home/koril/project/djhx-pan/djhx-pan.db"
+        UPLOAD_FOLDER = "/home/koril/project/djhx-pan/uploads"
 
 
 class ProductionConfig(AppConfig):
