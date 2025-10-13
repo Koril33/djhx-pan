@@ -8,6 +8,7 @@ create table main.t_file
     filepath        TEXT,
     parent_id       INTEGER default NULL,
     is_dir          INTEGER default 0,
+    preview_type    TEXT default NULL,
     create_datetime TEXT,
     update_datetime TEXT
 );

@@ -111,6 +111,35 @@ ICON_TYPES = {
 }
 
 
+PREVIEW_TYPES = {
+    # 图片类
+    "jpg": "image", "jpeg": "image", "png": "image", "gif": "image",
+    "webp": "image", "bmp": "image", "tif": "image", "tiff": "image",
+    "svg": "image", "ico": "image", "heic": "image", "avif": "image",
+    "psd": "image", "ai": "image", "eps": "image",
+
+    # 文本类
+    "txt": "text", "rtf": "text",
+    "xml": "text",
+    "yml": "text", "toml": "text",
+    "md": "text", "ini": "text",
+    "env": "text", "properties": "text",
+    "log": "text", "out": "text", "err": "text",
+
+    "py": "text", "java": "text", "json": "text",
+    "pyc": "text", "pyo": "text",
+    "js": "text", "ts": "text", "jsx": "text", "tsx": "text",
+    "html": "text", "htm": "text", "css": "text",
+    "class": "text", "jar": "text",
+    "c": "text", "cpp": "text", "h": "text", "hpp": "text", "cs": "text",
+    "go": "text", "rs": "text", "php": "text", "rb": "text",
+    "swift": "text", "kt": "text", "kts": "text", "dart": "text",
+    "json5": "text", "vue": "text", "jsp": "text", "asp": "text", "aspx": "text",
+    "sql": "text", "db": "text", "sqlite": "text",
+    "bat": "text", "cmd": "text", "sh": "text", "bash": "text", "zsh": "text",
+}
+
+
 def _row_to_dict(row) -> Dict[str, Any]:
     """
     如果 DB.query 返回的是 dict-like 或 sqlite Row，这里保证是 dict
@@ -307,12 +336,14 @@ def upload_file():
     filetype = ext.lstrip('.').lower() if ext else ''
     now = datetime.datetime.now().isoformat()
 
+    preview_type = PREVIEW_TYPES.get(filetype)
+
     DB.execute(
         """
-        INSERT INTO t_file (filename, filesize, filetype, filepath, is_dir, parent_id, create_datetime, update_datetime)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO t_file (filename, filesize, filetype, preview_type, filepath, is_dir, parent_id, create_datetime, update_datetime)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (filename, filesize, filetype, save_path, 0, parent_id, now, now)
+        (filename, filesize, filetype, preview_type, save_path, 0, parent_id, now, now)
     )
 
     # 上传后若是 fetch 提交通常会返回 200；这里统一重定向到目录页

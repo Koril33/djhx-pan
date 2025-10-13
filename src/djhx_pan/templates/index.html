@@ -66,9 +66,9 @@
                         <div>{{ f.create_datetime[:19].replace('T', ' ') }}</div>
                         <div class="actions">
                             <a class="btn" href="{{ url_for('file.download_file', file_id=f.file_id) }}">下载</a>
-                            {% if f.filetype in ['jpg', 'jpeg', 'png'] %}
+                            {% if f.preview_type == 'image' %}
                                 <button class="btn preview-btn" onclick="openPreview('{{ url_for('file.download_file', file_id=f.file_id) }}')">预览</button>
-                            {% elif f.filetype in ['txt', 'html', 'py', 'java', 'log', 'json'] %}
+                            {% elif f.preview_type == 'text' %}
                                 <button class="btn preview-btn" onclick="openTextPreview('{{ url_for('file.download_file', file_id=f.file_id) }}')">预览</button>
                             {% endif %}
                         </div>
