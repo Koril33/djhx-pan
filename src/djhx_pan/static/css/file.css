@@ -56,6 +56,10 @@
 }
 .breadcrumbs .sep { color: #9ca3af; }
 
+body.dark .breadcrumbs {
+    color: #ddd;
+}
+
 #fileContainer {
     margin-top: 20px;
 }
@@ -88,6 +92,11 @@
 .file-item:hover {
     box-shadow: 0 6px 18px rgba(16,24,40,0.06);
     transform: translateY(-3px);
+}
+
+body.dark .file-item {
+    background-color: #505050;
+    color: #ddd;
 }
 
 /* 复选框小块 */

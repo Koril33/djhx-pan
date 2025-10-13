@@ -14,7 +14,7 @@
             <h2>DJHX-Pan</h2>
         </div>
         <div class="nav-right">
-            <button onclick="toggleDark()">切换暗黑模式</button>
+            <button class="toggle-dark-btn" onclick="toggleDark()">切换暗黑模式</button>
             {% if session.get('user') %}
                 <div class="dropdown">
                     <span class="username">Hi, {{ session['user']['username'] }} ▼</span>
