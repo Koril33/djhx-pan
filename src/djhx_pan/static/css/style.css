@@ -335,6 +335,10 @@ body.dark .dropdown-menu .chapter-list a:hover {
     background: #333;
 }
 
+body.dark .file-item {
+    background: #424242;
+}
+
 /* 响应式设计 */
 @media (max-width: 900px) {
     .books-container li {

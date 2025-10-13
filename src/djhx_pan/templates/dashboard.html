@@ -14,6 +14,7 @@
             <h2>DJHX-Pan</h2>
         </div>
         <div class="nav-right">
+            <button onclick="toggleDark()">切换暗黑模式</button>
             {% if session.get('user') %}
                 <div class="dropdown">
                     <span class="username">Hi, {{ session['user']['username'] }} ▼</span>
@@ -43,7 +44,7 @@
                     <a href="{{ url_for('user.page') }}" {% if request.endpoint == 'user.page' %}class="active"{% endif %}>用户管理</a>
                 </li>
                 <li>
-                    <a href="{{ url_for('file.share_page') }}" {% if request.endpoint == 'share.page' %}class="active"{% endif %}>分享管理</a>
+                    <a href="{{ url_for('file.share_page') }}" {% if request.endpoint == 'file.share_page' %}class="active"{% endif %}>分享管理</a>
                 </li>
 
             </ul>
@@ -52,6 +53,6 @@
             {% block content %}{% endblock %}
         </div>
     </div>
-
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
 </body>
 </html>

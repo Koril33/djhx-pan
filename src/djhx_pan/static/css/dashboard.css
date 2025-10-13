@@ -1,8 +1,19 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
     margin: 0;
+}
+
+body.dark {
+    background: #1e1e1e;
+    color: #ddd;
 }
 
 .main {
@@ -14,6 +25,11 @@ body {
     width: 200px;
     background-color: #f0f0f0;
     padding: 20px;
+}
+
+body.dark .sidebar {
+    background-color: #1e1e1e;
+    color: #ddd;
 }
 
 .sidebar ul {
@@ -34,8 +50,17 @@ body {
     border-radius: 5px;
 }
 
+body.dark .sidebar a {
+    color: #ddd;
+}
+
 .sidebar a.active {
     background-color: #ddd;
+    font-weight: bold;
+}
+
+body.dark .sidebar a.active {
+    background-color: #505050;
     font-weight: bold;
 }
 
