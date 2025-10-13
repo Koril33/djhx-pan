@@ -27,6 +27,34 @@
     transition: transform 0.25s ease;
 }
 
+.modal-content pre {
+    text-align: left;
+    color: #e0e0e0;
+    font-family: Consolas, Monaco, monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 80vh; /* 限制最大高度 */
+    overflow-y: auto; /* 显示垂直滚动条 */
+    padding: 10px;
+    background-color: #333;
+    margin: 0;
+    border-radius: 4px;
+}
+
+/* 控制滚动条 */
+.modal-content pre::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content pre::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+}
+
+.modal-content pre::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
+}
+
 .close {
     position: absolute;
     top: 10px;
@@ -35,11 +63,6 @@
     font-size: 30px;
     font-weight: bold;
     cursor: pointer;
-}
-
-/* 鼠标滚轮缩放 */
-.modal-content img:active {
-    cursor: zoom-out;
 }
 
 /* 暗黑模式适配 */
