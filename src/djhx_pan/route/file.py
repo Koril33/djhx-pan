@@ -7,14 +7,17 @@ from typing import Optional, Dict, Any, List
 
 from flask import Blueprint, request, render_template, send_from_directory, redirect, url_for, flash
 
-from ..config.app_config import AppConfig
+from ..config.app_config import AppConfig, config_dict
 from ..db import DB
 from ..util import safe_secure_filename, login_required
 
 app_logger = logging.getLogger(AppConfig.PROJECT_NAME + "." + __name__)
 
-# 上传目录（项目内相对路径）
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+app_config_mode = os.getenv("CONFIG_MODE", "development")
+
+# 上传目录
+UPLOAD_FOLDER = config_dict.get(app_config_mode).UPLOAD_FOLDER
+app_logger.info("upload folder path: {}".format(UPLOAD_FOLDER))
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 file_bp = Blueprint('file', __name__, url_prefix='/file')
