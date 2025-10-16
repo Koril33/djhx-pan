@@ -9,7 +9,7 @@ from flask import Blueprint, request, render_template, send_from_directory, redi
 
 from ..config.app_config import AppConfig, config_dict
 from ..db import DB
-from ..util import safe_secure_filename, login_required
+from ..util import safe_secure_filename, login_required, JsonResult
 
 app_logger = logging.getLogger(AppConfig.PROJECT_NAME + "." + __name__)
 
@@ -675,3 +675,26 @@ def update_share(share_id):
     flash("已更新分享设置", "success")
     return redirect(url_for('file.share_page'))
 
+
+@file_bp.route('/public')
+def public_file():
+    public_shares = DB.query("""
+                             SELECT t_share.id as share_id,
+                                    t_file.id  as file_id,
+                                    *
+                             FROM t_share
+                                      JOIN t_file ON t_share.file_id = t_file.id
+                             WHERE password IS NULL
+                               AND (expires_at IS NULL OR expires_at > ?)
+                               AND t_file.is_dir = 0
+                             """, (datetime.datetime.now().isoformat(),))
+
+    public_shares = [_row_to_dict(r) for r in public_shares] if public_shares else []
+
+    for f in public_shares:
+        f['icon_class'] = 'folder' if f['is_dir'] else ICON_TYPES.get((f.get('filetype') or '').lower(), 'file')
+    public_shares.sort(
+        key=lambda r: (not r['is_dir'], -datetime.datetime.fromisoformat(r['create_datetime']).timestamp() if r['create_datetime'] else 0)
+    )
+
+    return JsonResult.successful('ok', data=public_shares)
