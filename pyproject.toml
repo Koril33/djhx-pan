@@ -7,5 +7,6 @@ dependencies = [
     "concurrent-log-handler>=0.9.28",
     "flask>=3.1.2",
     "flask-jwt-extended>=4.7.1",
+    "flask-sqlalchemy>=3.1.1",
     "gunicorn>=23.0.0",
 ]

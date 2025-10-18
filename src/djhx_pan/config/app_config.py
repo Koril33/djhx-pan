@@ -1,4 +1,5 @@
 import platform
+from datetime import timedelta
 
 
 class AppConfig(object):
@@ -10,6 +11,12 @@ class AppConfig(object):
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024
     MAX_FORM_MEMORY_SIZE = 100 * 1024 * 1024
 
+    PERMANENT_SESSION_LIFETIME = timedelta(days=5)
+
+    secret_key = 'fj@k!19qox'
+    JWT_SECRET_KEY = secret_key
+    SECRET_KEY = secret_key
+
 
 class DevelopmentConfig(AppConfig):
     # 存储开发环境中的配置
@@ -20,11 +27,15 @@ class DevelopmentConfig(AppConfig):
         DB_NAME = "/home/koril/project/djhx-pan/djhx-pan.db"
         UPLOAD_FOLDER = "/home/koril/project/djhx-pan/uploads"
 
+    SQLALCHEMY_DATABASE_URI = "sqlite:///" + DB_NAME
+
 
 class ProductionConfig(AppConfig):
     # 存储生产环境中的配置
     DB_NAME = "/home/koril/project/djhx-pan/djhx-pan.db"
     UPLOAD_FOLDER = "/home/koril/project/djhx-pan/uploads"
+
+    SQLALCHEMY_DATABASE_URI = "sqlite:///" + DB_NAME
 
 config_dict = {
     'development': DevelopmentConfig,
