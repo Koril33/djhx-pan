@@ -1,9 +1,7 @@
-import re
 from datetime import datetime
 
-from sqlalchemy.orm import validates
-
 from ..extension import db
+
 
 class BaseModel(db.Model):
     __abstract__ = True  # 👈 不会生成表
@@ -21,11 +19,6 @@ class User(BaseModel):
     email = db.Column(db.String(50), unique=True, nullable=True)
     phone = db.Column(db.String(11), nullable=True)
 
-    @validates('phone')
-    def validate_phone(self, key, value):
-        if not re.match(r'^\d{11}$', value):
-            raise ValueError("手机号必须为11位数字")
-        return value
 
 class File(BaseModel):
     __tablename__ = "t_file"
