@@ -10,6 +10,7 @@ from flask_jwt_extended import (
 from .file import ICON_TYPES, _row_to_dict, UPLOAD_FOLDER, PREVIEW_TYPES, delete_entry
 from ..config.app_config import AppConfig
 from ..db import DB
+from ..service import file_service
 from ..util import JsonResult, safe_secure_filename
 
 app_logger = logging.getLogger(AppConfig.PROJECT_NAME + "." + __name__)
@@ -46,6 +47,17 @@ def api_file_page():
     return JsonResult.successful(data=rows)
 
 
+@api_file_bp.route('/create-folder', methods=['POST'])
+@jwt_required()
+def create_folder():
+    json_data = request.get_json()
+    name = json_data.get('folder_name')
+    parent_id = json_data.get('parent_id')
+    file_service.save_folder(folder_name=name, parent_id=parent_id)
+
+    return JsonResult.successful(f'目录 {name} 创建成功')
+
+
 @api_file_bp.route('/upload', methods=['POST'])
 @jwt_required()
 def api_upload_file():
@@ -61,62 +73,17 @@ def api_upload_file():
     if not filename:
         return JsonResult.failed("文件名不能为空")
 
-    parent_id = request.form.get('parent_id') or None
-    # 保存到 uploads 目录并避免同名覆盖
-    save_path = os.path.join(UPLOAD_FOLDER, filename)
+    md5 = request.form.get('md5')
+    parent_id = request.form.get('parent_id')
+    file_service.save_file(file=f, parent_id=parent_id, md5=md5)
 
-    counter = 1
-    original_name = filename
-    name_root, ext = os.path.splitext(original_name)
-    while os.path.exists(save_path):
-        filename = f"{name_root}_{counter}{ext}"
-        save_path = os.path.join(UPLOAD_FOLDER, filename)
-        counter += 1
-
-    try:
-        f.save(save_path)
-    except Exception as e:
-        app_logger.exception("保存上传文件失败: %s", e)
-        return JsonResult.failed("文件上传失败")
-
-    # 检查是否为文件
-    if not os.path.isfile(save_path):
-        # 清理异常目录（极端情况）
-        if os.path.exists(save_path) and os.path.isdir(save_path):
-            try:
-                os.rmdir(save_path)
-            except Exception:
-                pass
-        return JsonResult.failed("上传内容不是有效文件")
-
-    filesize = os.path.getsize(save_path)
-    _, ext = os.path.splitext(filename)
-    filetype = ext.lstrip('.').lower() if ext else ''
-    now = datetime.now().isoformat()
-
-    preview_type = PREVIEW_TYPES.get(filetype)
-
-    DB.execute(
-        """
-        INSERT INTO t_file (filename, filesize, filetype, preview_type, filepath, is_dir, parent_id, create_datetime, update_datetime)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (filename, filesize, filetype, preview_type, save_path, 0, parent_id, now, now)
-    )
     return JsonResult.successful("上传文件成功")
 
 
 @api_file_bp.route('/download/<int:file_id>', methods=['GET'])
 @jwt_required()
 def api_download_file(file_id):
-    rows = DB.query("SELECT * FROM t_file WHERE id=?", (file_id,))
-    if not rows:
-        return JsonResult.failed("文件不存在")
-    row = _row_to_dict(rows[0])
-
-    filepath = row.get('filepath')
-    if not filepath:
-        return JsonResult.failed("无法下载：未找到文件路径")
+    filepath = file_service.download_file(file_id=file_id)
     directory = os.path.dirname(filepath)
     filename = os.path.basename(filepath)
     return send_from_directory(directory, filename, as_attachment=True)

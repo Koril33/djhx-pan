@@ -2,13 +2,14 @@ create table main.t_file
 (
     id              INTEGER
         primary key autoincrement,
-    filename        TEXT not null,
-    filesize        INTEGER,
-    filetype        TEXT,
-    filepath        TEXT,
-    parent_id       INTEGER default NULL,
-    is_dir          INTEGER default 0,
-    preview_type    TEXT default NULL,
+    filename        TEXT    NOT NULL,
+    filesize        INTEGER DEFAULT 0,
+    filetype        TEXT    NOT NULL,
+    filepath        TEXT    NOT NULL,
+    parent_id       INTEGER DEFAULT NULL,
+    is_dir          INTEGER DEFAULT 0,
+    preview_type    TEXT    DEFAULT NULL,
+    md5             TEXT    DEFAULT NULL,
     create_datetime TEXT,
     update_datetime TEXT
 );

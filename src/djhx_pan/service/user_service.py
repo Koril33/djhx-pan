@@ -6,11 +6,14 @@ from datetime import timedelta
 
 from flask_jwt_extended import create_access_token, create_refresh_token
 
+from ..config.log_config import project_logger
 from ..exception import ClientError
 from ..repository import user_repo
 from ..repository.user_repo import get_user_by_email
 from ..util import PasswordUtil, send_email_verify_code
 from ..model import User
+
+app_logger = project_logger()
 
 JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=60)
 JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)

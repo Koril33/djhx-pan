@@ -26,3 +26,14 @@ class User(BaseModel):
         if not re.match(r'^\d{11}$', value):
             raise ValueError("手机号必须为11位数字")
         return value
+
+class File(BaseModel):
+    __tablename__ = "t_file"
+    filename = db.Column(db.String(1024), nullable=False)
+    filesize = db.Column(db.Integer, nullable=False)
+    filetype = db.Column(db.String(20), nullable=False)
+    filepath = db.Column(db.String(1024), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('t_file.id'), nullable=True)
+    is_dir = db.Column(db.Integer, nullable=False)
+    preview_type = db.Column(db.String(20), nullable=False)
+    md5 = db.Column(db.String(32), nullable=True)

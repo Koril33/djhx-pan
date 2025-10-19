@@ -1,3 +1,5 @@
+import builtins
+
 from .app_config import AppConfig
 import logging.config
 from pathlib import Path
@@ -51,3 +53,15 @@ def init_log_config():
     logging.config.dictConfig(log_config_dict)
 
 app_logger = logging.getLogger(f'{AppConfig.PROJECT_NAME}')
+
+
+def project_logger(name=None):
+    if name is None:
+        import inspect
+        frame = inspect.stack()[1]
+        module = inspect.getmodule(frame[0])
+        name = module.__name__ if module else "unknown"
+    return logging.getLogger(f"{AppConfig.PROJECT_NAME}.{name}")
+
+# 让全局都能用 logger()
+builtins.logger = project_logger
