@@ -366,9 +366,9 @@ def create_folder():
 
     # 插入目录记录（filepath 为 NULL）
     DB.execute("""
-        INSERT INTO t_file (filename, is_dir, parent_id, create_datetime, update_datetime)
-        VALUES (?, ?, ?, ?, ?)
-    """, (name, 1, parent_id if parent_id else None, now, now))
+        INSERT INTO t_file (filename, filetype, filepath, is_dir, parent_id, create_datetime, update_datetime)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (name, 'folder', '', 1, parent_id if parent_id else None, now, now))
 
     return redirect(url_for('file.file_page', parent_id=parent_id))
 
