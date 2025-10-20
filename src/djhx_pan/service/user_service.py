@@ -24,7 +24,7 @@ email_code_cache = {}
 @dataclass
 class TokenData:
     access_token: str
-    refresh_token: str
+    refresh_token: str = None
     token_type: str = "Bearer"
 
     def to_dict(self) -> dict:
@@ -97,3 +97,10 @@ def send_email_code(email: str) -> None:
     except Exception as e:
         raise e
 
+
+def refresh_token(username: str) -> TokenData | None:
+    user = user_repo.get_user_by_username(username)
+    if not user:
+        raise ClientError(f'用户 {username} 不存在')
+    access_token = create_access_token(identity=user.username, expires_delta=JWT_ACCESS_TOKEN_EXPIRES)
+    return TokenData(access_token=access_token)

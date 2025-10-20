@@ -15,7 +15,7 @@ app_logger = logging.getLogger(AppConfig.PROJECT_NAME + "." + __name__)
 
 api_auth_bp = Blueprint('api_auth', __name__, url_prefix='/api/auth')
 
-@api_auth_bp.route('/login', methods=['POST'])
+@api_auth_bp.post('/login')
 def api_login():
     data = request.get_json()
     login_type = data.get('login_type', 'username')
@@ -39,7 +39,7 @@ def api_login():
     raise ClientError(f'未知的登录类型: {login_type}')
 
 
-@api_auth_bp.route('/register', methods=['POST'])
+@api_auth_bp.post('/register')
 def api_register():
     data = request.get_json()
     username = data.get('username')
@@ -54,7 +54,7 @@ def api_register():
     return JsonResult.successful(f'用户 {new_user.username} 注册成功')
 
 
-@api_auth_bp.route('/send_code', methods=['POST'])
+@api_auth_bp.post('/send_code')
 def api_send_code():
     data = request.get_json()
     email = data.get('email')
@@ -62,7 +62,7 @@ def api_send_code():
     return JsonResult.successful(f'邮箱验证码已发送')
 
 
-@api_auth_bp.route('/me', methods=['GET'])
+@api_auth_bp.get('/me')
 @jwt_required()
 def api_me():
     username = get_jwt_identity()
@@ -78,8 +78,19 @@ def api_me():
     return JsonResult.successful("ok", user_info)
 
 
-@api_auth_bp.route('/logout', methods=['POST'])
+@api_auth_bp.post('/logout')
 @jwt_required(optional=True)
 def api_logout():
     # 无状态，客户端直接丢弃 token 即可
     return JsonResult.successful("已登出")
+
+
+@api_auth_bp.get('/refresh_token')
+@jwt_required(refresh=True)
+def api_refresh_token():
+    username = get_jwt_identity()
+    refresh_token_data = user_service.refresh_token(username)
+    if not refresh_token_data:
+        raise ServerError(f'无法生成 refresh token')
+    return JsonResult.successful('ok', refresh_token_data)
+
