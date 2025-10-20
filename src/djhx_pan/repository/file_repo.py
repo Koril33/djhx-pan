@@ -37,3 +37,7 @@ def get_file_by_id(file_id: int) -> File:
 def delete_file(file_id):
     db.session.delete(get_file_by_id(file_id))
     db.session.commit()
+
+
+def exist_child(file_id):
+    return File.query.filter_by(parent_id=file_id).count() != 0

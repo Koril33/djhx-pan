@@ -116,7 +116,7 @@ def delete_file(file_id):
         raise ClientError(f'文件 id {file_id} 无法找到')
 
     if target_file.is_dir:
-        raise ClientError(f'接口调用错误，无法删除目录')
+        raise ClientError(f'接口调用错误，该接口无法删除目录')
 
     target_filepath = target_file.filepath
     if target_filepath and os.path.exists(target_filepath) and os.path.isfile(target_filepath):
@@ -133,11 +133,14 @@ def delete_folder(folder_id):
         raise ClientError(f'目录 id {folder_id} 无法找到')
 
     if not target_folder.is_dir:
-        raise ClientError(f'接口调用错误，无法删除文件')
+        raise ClientError(f'接口调用错误，该接口无法删除文件')
+
+    if file_repo.exist_child(folder_id):
+        raise ClientError(f'该目录下存在子文件，无法删除目录')
 
     target_folder_path = target_folder.filepath
-    if target_folder_path and os.path.exists(target_folder_path) and os.path.isfile(target_folder_path):
-        os.remove(target_folder_path)
+    if target_folder_path and os.path.exists(target_folder_path) and os.path.isdir(target_folder_path):
+        os.rmdir(target_folder_path)
         file_repo.delete_file(folder_id)
         return target_folder
     else:
