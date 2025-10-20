@@ -308,6 +308,12 @@ def upload_file():
     # 保存到 uploads 目录并避免同名覆盖
     save_path = os.path.join(UPLOAD_FOLDER, filename)
 
+    if parent_id:
+        parent_folder = DB.query("SELECT * FROM t_file WHERE id=?", (parent_id,))
+        parent_folder = parent_folder[0] if parent_folder else None
+        if parent_folder:
+            save_path = os.path.join(parent_folder['filepath'], filename)
+
     counter = 1
     original_name = filename
     name_root, ext = os.path.splitext(original_name)
@@ -356,11 +362,23 @@ def upload_file():
 @file_bp.route('/create-folder', methods=['POST'])
 @login_required
 def create_folder():
-    name = request.form.get('folder_name')
+    folder_name = request.form.get('folder_name')
     parent_id = request.form.get('parent_id')
     now = datetime.datetime.now().isoformat()
 
-    if not name:
+    parent_path = UPLOAD_FOLDER
+    if parent_id:
+        parent_id = int(parent_id)
+
+        parent_folder = DB.query("SELECT * FROM t_file WHERE id=?", (parent_id,))
+        parent_folder = parent_folder[0] if parent_folder else None
+        if parent_folder:
+            parent_path = parent_folder['filepath']
+
+    folder_path = os.path.join(parent_path, folder_name)
+    os.makedirs(folder_path, exist_ok=True)
+
+    if not folder_name:
         flash("文件夹名称不能为空")
         return redirect(url_for('file.file_page', parent_id=parent_id))
 
@@ -368,7 +386,7 @@ def create_folder():
     DB.execute("""
         INSERT INTO t_file (filename, filetype, filepath, is_dir, parent_id, create_datetime, update_datetime)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (name, 'folder', '', 1, parent_id if parent_id else None, now, now))
+    """, (folder_name, 'folder', str(folder_path), 1, parent_id if parent_id else None, now, now))
 
     return redirect(url_for('file.file_page', parent_id=parent_id))
 
