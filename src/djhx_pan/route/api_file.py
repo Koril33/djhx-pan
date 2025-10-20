@@ -18,7 +18,7 @@ app_logger = logging.getLogger(AppConfig.PROJECT_NAME + "." + __name__)
 api_file_bp = Blueprint('api_file', __name__, url_prefix='/api/file')
 
 
-@api_file_bp.route('/', methods=['GET'])
+@api_file_bp.get('/')
 @jwt_required()
 def api_file_page():
     parent_id = request.args.get('parent_id')
@@ -47,9 +47,9 @@ def api_file_page():
     return JsonResult.successful(data=rows)
 
 
-@api_file_bp.route('/create-folder', methods=['POST'])
+@api_file_bp.post('/create-folder')
 @jwt_required()
-def create_folder():
+def api_create_folder():
     json_data = request.get_json()
     name = json_data.get('folder_name')
     parent_id = json_data.get('parent_id')
@@ -58,7 +58,7 @@ def create_folder():
     return JsonResult.successful(f'目录 {name} 创建成功')
 
 
-@api_file_bp.route('/upload', methods=['POST'])
+@api_file_bp.post('/upload')
 @jwt_required()
 def api_upload_file():
     # 支持传统表单上传（file input）和 fetch 上传（multipart）
@@ -80,7 +80,7 @@ def api_upload_file():
     return JsonResult.successful("上传文件成功")
 
 
-@api_file_bp.route('/download/<int:file_id>', methods=['GET'])
+@api_file_bp.get('/download/<int:file_id>')
 @jwt_required()
 def api_download_file(file_id):
     filepath = file_service.download_file(file_id=file_id)
@@ -89,16 +89,15 @@ def api_download_file(file_id):
     return send_from_directory(directory, filename, as_attachment=True)
 
 
-@api_file_bp.route('/delete/<int:file_id>', methods=['POST'])
+@api_file_bp.post('/delete/file/<int:file_id>')
 @jwt_required()
-def api_delete_file_route(file_id):
-    rows = DB.query("SELECT * FROM t_file WHERE id=?", (file_id,))
-    if not rows:
-        return JsonResult.failed("文件不存在")
-    try:
-        delete_entry(file_id)
-    except Exception as e:
-        app_logger.exception("删除条目 %s 失败: %s", file_id, e)
-        return JsonResult.failed("删除失败")
+def api_delete_file(file_id):
+    deleted_file = file_service.delete_file(file_id=file_id)
+    return JsonResult.successful(f'删除文件 {deleted_file.filename} 成功')
 
-    return JsonResult.successful("删除成功")
+
+@api_file_bp.post('/delete/folder/<int:folder_id>')
+@jwt_required()
+def api_delete_folder(folder_id):
+    deleted_folder = file_service.delete_folder(folder_id=folder_id)
+    return JsonResult.successful(f'删除目录 {deleted_folder.filename} 成功')

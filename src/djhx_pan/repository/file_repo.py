@@ -32,3 +32,8 @@ def get_file_by_md5(md5: str) -> File:
 
 def get_file_by_id(file_id: int) -> File:
     return File.query.filter_by(id=file_id).first()
+
+
+def delete_file(file_id):
+    db.session.delete(get_file_by_id(file_id))
+    db.session.commit()

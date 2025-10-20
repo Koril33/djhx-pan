@@ -108,3 +108,37 @@ def download_file(file_id) -> str:
         raise ClientError(f'无法下载: 未找到文件 id {file_id} 路径')
 
     return filepath
+
+
+def delete_file(file_id):
+    target_file = file_repo.get_file_by_id(file_id)
+    if not target_file:
+        raise ClientError(f'文件 id {file_id} 无法找到')
+
+    if target_file.is_dir:
+        raise ClientError(f'接口调用错误，无法删除目录')
+
+    target_filepath = target_file.filepath
+    if target_filepath and os.path.exists(target_filepath) and os.path.isfile(target_filepath):
+        os.remove(target_filepath)
+        file_repo.delete_file(file_id)
+        return target_file
+    else:
+        raise ClientError(f'删除文件 id {file_id} 异常')
+
+
+def delete_folder(folder_id):
+    target_folder = file_repo.get_file_by_id(folder_id)
+    if not target_folder:
+        raise ClientError(f'目录 id {folder_id} 无法找到')
+
+    if not target_folder.is_dir:
+        raise ClientError(f'接口调用错误，无法删除文件')
+
+    target_folder_path = target_folder.filepath
+    if target_folder_path and os.path.exists(target_folder_path) and os.path.isfile(target_folder_path):
+        os.remove(target_folder_path)
+        file_repo.delete_file(folder_id)
+        return target_folder
+    else:
+        raise ClientError(f'删除目录 id {folder_id} 异常')
