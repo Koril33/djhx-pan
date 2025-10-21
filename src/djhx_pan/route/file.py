@@ -195,6 +195,9 @@ def delete_entry(entry_id: int):
             cid = c.get('id') if isinstance(c, dict) else c[0] if len(c) else None
             if cid:
                 delete_entry(cid)
+        filepath = row.get('filepath')
+        if os.path.isdir(filepath):
+            os.rmdir(filepath)
     else:
         filepath = row.get('filepath')
         try:
